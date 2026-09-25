@@ -93,17 +93,28 @@ export const DEFAULT_GALLERY: GalleryImage[] = [
   { id: 11, url: "https://i.postimg.cc/Y2TDRL46/galeria-rolando-(10).jpg", title: "Eng. Dénis Zombo Vasco" }
 ];
 
-const GALLERY_STORAGE_KEY = 'dzmv_author_gallery_v1';
+const GALLERY_STORAGE_KEY = 'dzmv_author_gallery_v4';
 
 export function getStoredGallery(): GalleryImage[] {
   try {
+    // Clean old legacy storage keys if present
+    ['dzmv_author_gallery_v1', 'dzmv_author_gallery_v2', 'dzmv_author_gallery_v3'].forEach(k => {
+      try { localStorage.removeItem(k); } catch {}
+    });
+
     const raw = localStorage.getItem(GALLERY_STORAGE_KEY);
     if (!raw) {
       localStorage.setItem(GALLERY_STORAGE_KEY, JSON.stringify(DEFAULT_GALLERY));
       return DEFAULT_GALLERY;
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_GALLERY;
+    const list = Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_GALLERY;
+    const sanitized = list.map((img: GalleryImage) => ({
+      ...img,
+      title: (img.title || '').replace(/Ângelo/gi, 'Zombo').replace(/Angelo/gi, 'Zombo')
+    }));
+    localStorage.setItem(GALLERY_STORAGE_KEY, JSON.stringify(sanitized));
+    return sanitized;
   } catch {
     return DEFAULT_GALLERY;
   }

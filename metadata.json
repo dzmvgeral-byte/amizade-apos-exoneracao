@@ -1,6 +1,8 @@
 {
-  "name": "Amizade após Exoneração - Editora Sábhia & Veritas Press",
+  "name": "Amizade após Exoneração",
   "description": "Plataforma editorial oficial da obra 'Amizade após Exoneração' do Eng. Dénis Zombo. Venda em Kwanza (Kz), console de gestão com integração WhatsApp Meta Cloud API e despacho digital automatizado.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }

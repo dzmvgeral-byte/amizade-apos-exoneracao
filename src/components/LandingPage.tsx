@@ -425,6 +425,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* SECTION 5 & 6: UNIFIED HIGH-CONVERTING CHECKOUT SECTION */}
       <section className="w-full py-20 lg:py-24 px-6 lg:px-12 bg-gradient-to-b from-white via-slate-50 to-white" id="formatos">
         <div className="max-w-3xl mx-auto flex flex-col gap-8" id="comprar-agora">
+          {/* Back Cover Highlights (A Mensagem Central do Livro) */}
+          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-amber-50 via-slate-50 to-amber-50/40 border border-amber-200/90 space-y-4 shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <span className="material-symbols-outlined text-amber-700 text-2xl">menu_book</span>
+              <div>
+                <span className="text-xs uppercase font-bold text-amber-900 block">Síntese da Contracapa</span>
+                <h3 className="font-serif-editorial text-xl font-bold text-slate-900">
+                  O Que o Livro Aborda e Transforma no Leitor
+                </h3>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm text-slate-700">
+              {BOOK_METADATA.backCoverPoints.map((point, idx) => (
+                <div key={idx} className="flex items-start gap-2.5 bg-white p-3 rounded-xl border border-slate-200/80">
+                  <span className="material-symbols-outlined text-amber-600 text-base shrink-0 mt-0.5">check_circle</span>
+                  <span>{point}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="text-center flex flex-col gap-2">
             <span className="text-xs font-bold uppercase tracking-widest text-amber-700">
               Edição Digital Oficial • Formato & Aquisição
@@ -553,8 +575,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       <span className="material-symbols-outlined text-amber-700 text-[20px] shrink-0 mt-0.5 sm:mt-0">notifications_active</span>
                       <span>Desejo ser avisado(a) quando o Livro Físico Impresso estiver pronto</span>
                     </span>
-                    <p className="text-slate-600 mt-1.5 leading-relaxed">
-                      A versão impressa encontra-se em fase de produção gráfica. Ao marcar esta opção, os seus dados ficam registados no sistema editorial e receberá um aviso no WhatsApp assim que a tiragem estiver pronta (sem qualquer cobrança antecipada).
+                    <p className="text-slate-600 mt-1 leading-relaxed">
+                      Será notificado(a) gratuitamente via WhatsApp assim que a edição impressa estiver disponível.
                     </p>
                   </div>
                 </label>
@@ -1091,28 +1113,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
-          {/* Back Cover Highlights (A Mensagem Central do Livro) */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-amber-50 via-slate-50 to-amber-50/40 border border-amber-200/90 space-y-4">
-            <div className="flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-amber-700 text-2xl">menu_book</span>
-              <div>
-                <span className="text-xs uppercase font-bold text-amber-900 block">Síntese da Contracapa</span>
-                <h4 className="font-serif-editorial text-xl font-bold text-slate-900">
-                  O Que o Livro Aborda e Transforma no Leitor
-                </h4>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs sm:text-sm text-slate-700">
-              {BOOK_METADATA.backCoverPoints.map((point, idx) => (
-                <div key={idx} className="flex items-start gap-2.5 bg-white p-3 rounded-xl border border-slate-200/80">
-                  <span className="material-symbols-outlined text-amber-600 text-base shrink-0 mt-0.5">check_circle</span>
-                  <span>{point}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
         </div>
       </section>
 
@@ -1226,19 +1226,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="flex items-center gap-2 text-xs text-slate-400 shrink-0">
             <span className="inline-flex items-center gap-1 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg">
               <span className="material-symbols-outlined text-amber-400 text-sm">swipe</span>
-              <span>Arrastamento suave contínuo (Esquerda ➔ Direita)</span>
+              <span>Arrastamento suave contínuo (Direita ➔ Esquerda)</span>
             </span>
           </div>
         </div>
 
-        {/* Marquee Carousel Container: moving smoothly from Left to Right */}
+        {/* Marquee Carousel Container: moving smoothly from Right to Left */}
         <div className="relative w-full overflow-hidden group">
           {/* Subtle gradient edges for professional blending */}
           <div className="absolute left-0 top-0 bottom-0 w-12 sm:w-24 bg-gradient-to-r from-[#070A12] to-transparent z-10 pointer-events-none"></div>
           <div className="absolute right-0 top-0 bottom-0 w-12 sm:w-24 bg-gradient-to-l from-[#070A12] to-transparent z-10 pointer-events-none"></div>
 
           {/* Marquee Track (Repeated twice for continuous infinite flow) */}
-          <div className="animate-marquee-ltr flex items-center gap-4 sm:gap-6 py-2">
+          <div className="animate-marquee-rtl flex items-center gap-4 sm:gap-6 py-2">
             {[...galleryImages, ...galleryImages].map((img, index) => (
               <div
                 key={`${img.id}-${index}`}
@@ -1259,10 +1259,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="absolute bottom-0 left-0 right-0 p-3 flex flex-col justify-end text-white">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-amber-300 flex items-center gap-1">
                     <span className="material-symbols-outlined text-[13px]">person</span>
-                    Dénis Vasco
+                    Dénis Zombo
                   </span>
                   <span className="text-xs font-semibold text-white/95 truncate leading-snug mt-0.5">
-                    {img.title}
+                    {img.title.replace(/Ângelo/gi, 'Zombo').replace(/Angelo/gi, 'Zombo')}
                   </span>
                 </div>
 
@@ -1412,7 +1412,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="p-4 bg-white/5 border-b border-white/10 flex items-center justify-between text-white">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-amber-400">photo</span>
-                <span className="text-sm font-bold truncate">{selectedGalleryImage.title}</span>
+                <span className="text-sm font-bold truncate">
+                  {selectedGalleryImage.title.replace(/Ângelo/gi, 'Zombo').replace(/Angelo/gi, 'Zombo')}
+                </span>
               </div>
               <button
                 onClick={() => setSelectedGalleryImage(null)}
@@ -1433,7 +1435,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             {/* Lightbox Footer */}
             <div className="p-4 bg-white/5 border-t border-white/10 flex items-center justify-between text-xs text-slate-300">
-              <span className="font-semibold text-amber-300">Eng. Dénis Ângelo Vasco • Fotografia Oficial</span>
+              <span className="font-semibold text-amber-300">Eng. Dénis Zombo Mendonça Vasco • Fotografia Oficial</span>
               <button
                 onClick={() => setSelectedGalleryImage(null)}
                 className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg transition-colors cursor-pointer"
