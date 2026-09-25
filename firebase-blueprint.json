@@ -1,0 +1,61 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile document",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "editor", "reader"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Registered administrator",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string" }
+      },
+      "required": ["email", "role"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "Book order or reservation lead",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "province": { "type": "string" },
+        "format": { "type": "string", "enum": ["ebook", "fisico"] },
+        "paymentMethod": { "type": "string" },
+        "amountKz": { "type": "number" },
+        "status": { "type": "string", "enum": ["novo", "contactado", "pago", "concluido"] },
+        "wantsPhysicalAlert": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "fullName", "phone", "format", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Admin allowlist documents"
+    },
+    "/leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Customer leads and book orders"
+    }
+  }
+}
