@@ -27,6 +27,7 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
   onOpenReader,
 }) => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'leads' | 'geral' | 'pagamentos' | 'usuarios' | 'galeria' | 'whatsapp' | 'metadados'>('leads');
   const [statusFilter, setStatusFilter] = useState<'all' | 'novo' | 'contactado' | 'pago' | 'concluido' | 'alerta-fisico'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -243,36 +244,203 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
   return (
     <div className="min-h-screen bg-[#F9F9FF] text-[#141B2B] flex flex-col font-sans antialiased">
       <div className="flex-1 flex flex-col md:flex-row min-w-0">
-        {/* Sidebar (Collapsible) */}
+        {/* MOBILE DRAWER BACKDROP & OVERLAY */}
+        {isMobileMenuOpen && (
+          <div
+            className="fixed inset-0 bg-black/70 z-50 backdrop-blur-xs md:hidden animate-fade-in"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <div
+              className="w-72 max-w-[85vw] h-full bg-[#0B0F19] text-slate-200 p-5 flex flex-col justify-between shadow-2xl overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="space-y-6">
+                {/* Mobile Drawer Header */}
+                <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <div className="px-2.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-serif-editorial text-sm font-bold tracking-wider">
+                      DZMV
+                    </div>
+                    <div>
+                      <h2 className="font-serif-editorial text-base text-white font-bold leading-tight">
+                        Console DZMV
+                      </h2>
+                      <span className="text-[10px] text-amber-400 uppercase tracking-widest font-bold block">
+                        Edição Editorial
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">close</span>
+                  </button>
+                </div>
+
+                {/* Mobile Admin Card */}
+                <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-xl space-y-2">
+                  <div className="flex items-center gap-3">
+                    {adminUser?.photoURL ? (
+                      <img
+                        src={adminUser.photoURL}
+                        alt={adminUser.name}
+                        className="w-9 h-9 rounded-full object-cover shrink-0 border border-amber-500/40"
+                      />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-amber-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                        {adminUser?.avatarInitials || 'DZ'}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-bold text-white block truncate">
+                        {adminUser?.name || 'Eng. Dénis Zombo'}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block truncate font-mono">
+                        {adminUser?.email || 'dzmv.geral@gmail.com'}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="inline-block px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">
+                    {adminUser?.role || 'Autor & Administrador'}
+                  </span>
+                </div>
+
+                {/* Mobile Nav Tabs */}
+                <nav className="flex flex-col gap-1 text-xs font-semibold">
+                  <button
+                    onClick={() => { setActiveTab('leads'); setIsMobileMenuOpen(false); }}
+                    className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left ${
+                      activeTab === 'leads' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">group</span>
+                    <span>Leads Registados</span>
+                    <span className="ml-auto font-mono text-[11px] px-2 py-0.5 bg-black/20 rounded-full font-bold">
+                      {leads.length}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('geral'); setIsMobileMenuOpen(false); }}
+                    className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left ${
+                      activeTab === 'geral' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">analytics</span>
+                    <span>Visão Geral & Métricas</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('pagamentos'); setIsMobileMenuOpen(false); }}
+                    className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left ${
+                      activeTab === 'pagamentos' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">account_balance</span>
+                    <span>Contas & Pagamento</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('usuarios'); setIsMobileMenuOpen(false); }}
+                    className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left ${
+                      activeTab === 'usuarios' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">badge</span>
+                    <span>Gestão de Usuários</span>
+                    <span className="ml-auto font-mono text-[11px] px-2 py-0.5 bg-black/20 rounded-full font-bold">
+                      {adminsList.length}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('galeria'); setIsMobileMenuOpen(false); }}
+                    className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left ${
+                      activeTab === 'galeria' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">photo_library</span>
+                    <span>Galeria de Fotos</span>
+                    <span className="ml-auto font-mono text-[11px] px-2 py-0.5 bg-black/20 rounded-full font-bold">
+                      {galleryList.length}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('whatsapp'); setIsMobileMenuOpen(false); }}
+                    className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left ${
+                      activeTab === 'whatsapp' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">chat</span>
+                    <span>WhatsApp Automation</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setActiveTab('metadados'); setIsMobileMenuOpen(false); }}
+                    className={`flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all text-left ${
+                      activeTab === 'metadados' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-300 hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">menu_book</span>
+                    <span>Metadados da Obra</span>
+                  </button>
+                </nav>
+              </div>
+
+              {/* Mobile Drawer Footer Actions */}
+              <div className="pt-6 border-t border-slate-800 space-y-3">
+                <button
+                  onClick={() => { onViewStore(); setIsMobileMenuOpen(false); }}
+                  className="w-full py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-sm">visibility</span>
+                  <span>Ver Loja Oficial</span>
+                </button>
+
+                <button
+                  onClick={() => { onLogout(); setIsMobileMenuOpen(false); }}
+                  className="w-full py-2.5 px-3 bg-red-950/40 hover:bg-red-900/50 text-red-300 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors border border-red-800/40"
+                >
+                  <span className="material-symbols-outlined text-sm">logout</span>
+                  <span>Sair do Painel</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* DESKTOP SIDEBAR (STICKY & COLLAPSIBLE) */}
         <aside
-          className={`bg-[#F1F3FF] border-r border-slate-200 flex flex-col justify-between shrink-0 transition-all duration-300 ${
-            isSidebarCollapsed ? 'w-full md:w-20 p-3' : 'w-full md:w-72 p-5'
+          className={`hidden md:flex flex-col justify-between shrink-0 bg-[#0B0F19] text-slate-300 border-r border-slate-800 transition-all duration-300 sticky top-0 h-screen overflow-y-auto z-40 ${
+            isSidebarCollapsed ? 'w-20 p-3' : 'w-64 lg:w-72 p-5'
           }`}
         >
           <div className="space-y-5">
-            {/* Brand Logo & Collapse Toggle */}
+            {/* Brand Header */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="px-2.5 py-1.5 rounded-xl bg-[#0B0F19] text-amber-400 flex items-center justify-center font-serif-editorial text-sm font-bold tracking-wider shadow-sm shrink-0">
+                <div className="px-2.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-serif-editorial text-sm font-bold tracking-wider shrink-0 shadow-md">
                   DZMV
                 </div>
                 {!isSidebarCollapsed && (
                   <div className="flex flex-col min-w-0">
-                    <span className="font-serif-editorial text-base text-slate-900 font-bold tracking-tight leading-tight truncate">
+                    <span className="font-serif-editorial text-base text-white font-bold tracking-tight leading-tight truncate">
                       DZMV Console
                     </span>
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-amber-800 truncate">
-                      Lançamento • Edição: Sábhia
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400 truncate">
+                      Lançamento • Sábhia
                     </span>
                   </div>
                 )}
               </div>
 
-              {/* Collapse Button */}
+              {/* Toggle Collapse Button */}
               <button
                 type="button"
                 onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                className="hidden md:flex p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200/80 transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
                 title={isSidebarCollapsed ? 'Expandir Menu' : 'Recolher Menu'}
               >
                 <span className="material-symbols-outlined text-[20px]">
@@ -283,41 +451,37 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
 
             {/* Admin Profile Card */}
             {!isSidebarCollapsed ? (
-              <div className="p-3 bg-white border border-slate-200 rounded-xl shadow-xs space-y-1">
+              <div className="p-3 bg-white/5 border border-white/10 rounded-xl space-y-1">
                 <div className="flex items-center gap-2.5">
                   {adminUser?.photoURL ? (
                     <img
                       src={adminUser.photoURL}
                       alt={adminUser.name}
-                      className="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-200"
+                      className="w-8 h-8 rounded-full object-cover shrink-0 border border-amber-500/40"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-amber-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-amber-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-sm">
                       {adminUser?.avatarInitials || 'DZ'}
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <span className="text-xs font-bold text-slate-900 block truncate">
+                    <span className="text-xs font-bold text-white block truncate">
                       {adminUser?.name || 'Eng. Dénis Zombo'}
                     </span>
-                    <span className="text-[10px] text-slate-500 block truncate font-mono">
+                    <span className="text-[10px] text-slate-400 block truncate font-mono">
                       {adminUser?.email || 'dzmv.geral@gmail.com'}
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 pt-0.5">
-                  <span className="inline-block px-2 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px] font-bold truncate">
+                <div className="flex items-center gap-1.5 pt-1">
+                  <span className="inline-block px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold truncate">
                     {adminUser?.role || 'Autor & Administrador'}
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Firebase
                   </span>
                 </div>
               </div>
             ) : (
               <div className="flex justify-center" title={`${adminUser?.name || 'Administrador'} (${adminUser?.email})`}>
-                <div className="w-9 h-9 rounded-full bg-amber-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                <div className="w-9 h-9 rounded-full bg-amber-600 text-white font-bold text-xs flex items-center justify-center shadow-md">
                   {adminUser?.avatarInitials || 'DZ'}
                 </div>
               </div>
@@ -327,138 +491,189 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
             <nav className="flex flex-col gap-1.5 text-xs font-semibold">
               <button
                 onClick={() => setActiveTab('leads')}
-                title="Leads Registados"
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left ${
-                  isSidebarCollapsed ? 'justify-center px-2' : ''
+                className={`relative group flex items-center transition-all ${
+                  isSidebarCollapsed
+                    ? 'w-11 h-11 mx-auto justify-center rounded-xl'
+                    : 'w-full gap-3 px-3.5 py-2.5 rounded-xl text-left'
                 } ${
                   activeTab === 'leads'
-                    ? 'bg-[#171B26] text-white shadow-sm'
-                    : 'text-slate-700 hover:bg-slate-200/70 hover:text-slate-900'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-lg shadow-amber-500/20'
+                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                 }`}
               >
-                <span className="material-symbols-outlined text-[20px] text-amber-400">group</span>
-                {!isSidebarCollapsed && (
+                <span className="material-symbols-outlined text-[20px] shrink-0">group</span>
+                {!isSidebarCollapsed ? (
                   <>
                     <span>Leads Registados</span>
-                    <span className="ml-auto font-mono text-[11px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-bold">
+                    <span className={`ml-auto font-mono text-[11px] px-2 py-0.5 rounded-full font-bold ${
+                      activeTab === 'leads' ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-800 text-amber-300'
+                    }`}>
                       {leads.length}
                     </span>
                   </>
+                ) : (
+                  <div className="absolute left-16 px-3 py-1.5 bg-slate-900 border border-slate-700 text-white text-xs font-semibold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 whitespace-nowrap">
+                    Leads Registados ({leads.length})
+                  </div>
                 )}
               </button>
 
               <button
                 onClick={() => setActiveTab('geral')}
-                title="Visão Geral & Métricas"
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left ${
-                  isSidebarCollapsed ? 'justify-center px-2' : ''
+                className={`relative group flex items-center transition-all ${
+                  isSidebarCollapsed
+                    ? 'w-11 h-11 mx-auto justify-center rounded-xl'
+                    : 'w-full gap-3 px-3.5 py-2.5 rounded-xl text-left'
                 } ${
                   activeTab === 'geral'
-                    ? 'bg-[#171B26] text-white shadow-sm'
-                    : 'text-slate-700 hover:bg-slate-200/70 hover:text-slate-900'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-lg shadow-amber-500/20'
+                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                 }`}
               >
-                <span className="material-symbols-outlined text-[20px]">analytics</span>
-                {!isSidebarCollapsed && <span>Visão Geral & Métricas</span>}
+                <span className="material-symbols-outlined text-[20px] shrink-0">analytics</span>
+                {!isSidebarCollapsed ? (
+                  <span>Visão Geral & Métricas</span>
+                ) : (
+                  <div className="absolute left-16 px-3 py-1.5 bg-slate-900 border border-slate-700 text-white text-xs font-semibold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 whitespace-nowrap">
+                    Visão Geral & Métricas
+                  </div>
+                )}
               </button>
 
               <button
                 onClick={() => setActiveTab('pagamentos')}
-                title="Configurações de Pagamento"
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left ${
-                  isSidebarCollapsed ? 'justify-center px-2' : ''
+                className={`relative group flex items-center transition-all ${
+                  isSidebarCollapsed
+                    ? 'w-11 h-11 mx-auto justify-center rounded-xl'
+                    : 'w-full gap-3 px-3.5 py-2.5 rounded-xl text-left'
                 } ${
                   activeTab === 'pagamentos'
-                    ? 'bg-[#171B26] text-white shadow-sm'
-                    : 'text-slate-700 hover:bg-slate-200/70 hover:text-slate-900'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-lg shadow-amber-500/20'
+                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                 }`}
               >
-                <span className="material-symbols-outlined text-[20px] text-emerald-400">account_balance</span>
-                {!isSidebarCollapsed && <span>Contas & Pagamento</span>}
+                <span className="material-symbols-outlined text-[20px] shrink-0">account_balance</span>
+                {!isSidebarCollapsed ? (
+                  <span>Contas & Pagamento</span>
+                ) : (
+                  <div className="absolute left-16 px-3 py-1.5 bg-slate-900 border border-slate-700 text-white text-xs font-semibold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 whitespace-nowrap">
+                    Contas & Pagamento
+                  </div>
+                )}
               </button>
 
               <button
                 onClick={() => setActiveTab('usuarios')}
-                title="Gestão de Usuários e Equipa"
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left ${
-                  isSidebarCollapsed ? 'justify-center px-2' : ''
+                className={`relative group flex items-center transition-all ${
+                  isSidebarCollapsed
+                    ? 'w-11 h-11 mx-auto justify-center rounded-xl'
+                    : 'w-full gap-3 px-3.5 py-2.5 rounded-xl text-left'
                 } ${
                   activeTab === 'usuarios'
-                    ? 'bg-[#171B26] text-white shadow-sm'
-                    : 'text-slate-700 hover:bg-slate-200/70 hover:text-slate-900'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-lg shadow-amber-500/20'
+                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                 }`}
               >
-                <span className="material-symbols-outlined text-[20px] text-blue-400">badge</span>
-                {!isSidebarCollapsed && (
+                <span className="material-symbols-outlined text-[20px] shrink-0">badge</span>
+                {!isSidebarCollapsed ? (
                   <>
                     <span>Gestão de Usuários</span>
-                    <span className="ml-auto font-mono text-[11px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full font-bold">
+                    <span className={`ml-auto font-mono text-[11px] px-2 py-0.5 rounded-full font-bold ${
+                      activeTab === 'usuarios' ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-800 text-blue-300'
+                    }`}>
                       {adminsList.length}
                     </span>
                   </>
+                ) : (
+                  <div className="absolute left-16 px-3 py-1.5 bg-slate-900 border border-slate-700 text-white text-xs font-semibold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 whitespace-nowrap">
+                    Gestão de Usuários ({adminsList.length})
+                  </div>
                 )}
               </button>
 
               <button
                 onClick={() => setActiveTab('galeria')}
-                title="Galeria de Fotos do Autor"
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left ${
-                  isSidebarCollapsed ? 'justify-center px-2' : ''
+                className={`relative group flex items-center transition-all ${
+                  isSidebarCollapsed
+                    ? 'w-11 h-11 mx-auto justify-center rounded-xl'
+                    : 'w-full gap-3 px-3.5 py-2.5 rounded-xl text-left'
                 } ${
                   activeTab === 'galeria'
-                    ? 'bg-[#171B26] text-white shadow-sm'
-                    : 'text-slate-700 hover:bg-slate-200/70 hover:text-slate-900'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-lg shadow-amber-500/20'
+                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                 }`}
               >
-                <span className="material-symbols-outlined text-[20px] text-amber-400">photo_library</span>
-                {!isSidebarCollapsed && (
+                <span className="material-symbols-outlined text-[20px] shrink-0">photo_library</span>
+                {!isSidebarCollapsed ? (
                   <>
                     <span>Galeria de Fotos</span>
-                    <span className="ml-auto font-mono text-[11px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-bold">
+                    <span className={`ml-auto font-mono text-[11px] px-2 py-0.5 rounded-full font-bold ${
+                      activeTab === 'galeria' ? 'bg-slate-950/20 text-slate-950' : 'bg-slate-800 text-amber-300'
+                    }`}>
                       {galleryList.length}
                     </span>
                   </>
+                ) : (
+                  <div className="absolute left-16 px-3 py-1.5 bg-slate-900 border border-slate-700 text-white text-xs font-semibold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 whitespace-nowrap">
+                    Galeria de Fotos ({galleryList.length})
+                  </div>
                 )}
               </button>
 
               <button
                 onClick={() => setActiveTab('whatsapp')}
-                title="WhatsApp Automation"
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left ${
-                  isSidebarCollapsed ? 'justify-center px-2' : ''
+                className={`relative group flex items-center transition-all ${
+                  isSidebarCollapsed
+                    ? 'w-11 h-11 mx-auto justify-center rounded-xl'
+                    : 'w-full gap-3 px-3.5 py-2.5 rounded-xl text-left'
                 } ${
                   activeTab === 'whatsapp'
-                    ? 'bg-[#171B26] text-white shadow-sm'
-                    : 'text-slate-700 hover:bg-slate-200/70 hover:text-slate-900'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-lg shadow-amber-500/20'
+                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                 }`}
               >
-                <span className="material-symbols-outlined text-[20px]">chat</span>
-                {!isSidebarCollapsed && <span>WhatsApp Automation</span>}
+                <span className="material-symbols-outlined text-[20px] shrink-0">chat</span>
+                {!isSidebarCollapsed ? (
+                  <span>WhatsApp Automation</span>
+                ) : (
+                  <div className="absolute left-16 px-3 py-1.5 bg-slate-900 border border-slate-700 text-white text-xs font-semibold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 whitespace-nowrap">
+                    WhatsApp Automation
+                  </div>
+                )}
               </button>
 
               <button
                 onClick={() => setActiveTab('metadados')}
-                title="Metadados da Obra"
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-left ${
-                  isSidebarCollapsed ? 'justify-center px-2' : ''
+                className={`relative group flex items-center transition-all ${
+                  isSidebarCollapsed
+                    ? 'w-11 h-11 mx-auto justify-center rounded-xl'
+                    : 'w-full gap-3 px-3.5 py-2.5 rounded-xl text-left'
                 } ${
                   activeTab === 'metadados'
-                    ? 'bg-[#171B26] text-white shadow-sm'
-                    : 'text-slate-700 hover:bg-slate-200/70 hover:text-slate-900'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-lg shadow-amber-500/20'
+                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
                 }`}
               >
-                <span className="material-symbols-outlined text-[20px]">menu_book</span>
-                {!isSidebarCollapsed && <span>Metadados da Obra</span>}
+                <span className="material-symbols-outlined text-[20px] shrink-0">menu_book</span>
+                {!isSidebarCollapsed ? (
+                  <span>Metadados da Obra</span>
+                ) : (
+                  <div className="absolute left-16 px-3 py-1.5 bg-slate-900 border border-slate-700 text-white text-xs font-semibold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 z-50 whitespace-nowrap">
+                    Metadados da Obra
+                  </div>
+                )}
               </button>
             </nav>
           </div>
 
           {/* Sidebar Footer */}
-          <div className="space-y-3 pt-6 border-t border-slate-200">
+          <div className="space-y-3 pt-6 border-t border-slate-800 mt-6">
             <div className={`flex items-center ${isSidebarCollapsed ? 'flex-col gap-3' : 'justify-between px-1'}`}>
               <button
                 onClick={onViewStore}
-                className="text-xs text-slate-700 hover:text-amber-800 font-bold flex items-center gap-1.5 transition-colors"
+                className={`text-xs text-slate-400 hover:text-amber-400 font-bold flex items-center gap-2 transition-colors ${
+                  isSidebarCollapsed ? 'p-2 rounded-lg hover:bg-slate-800' : ''
+                }`}
                 title="Ver Loja Oficial"
               >
                 <span className="material-symbols-outlined text-[18px]">visibility</span>
@@ -467,7 +682,9 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
 
               <button
                 onClick={onLogout}
-                className="text-xs text-red-600 hover:text-red-800 font-bold flex items-center gap-1.5 transition-colors"
+                className={`text-xs text-red-400 hover:text-red-300 font-bold flex items-center gap-2 transition-colors ${
+                  isSidebarCollapsed ? 'p-2 rounded-lg hover:bg-red-950/50' : ''
+                }`}
                 title="Sair do Painel"
               >
                 <span className="material-symbols-outlined text-[18px]">logout</span>
@@ -479,25 +696,66 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
 
         {/* Main Workspace Area */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Top Bar */}
-          <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-30">
+          {/* Executive Top Bar */}
+          <header className="h-16 bg-white border-b border-slate-200 px-4 sm:px-8 flex items-center justify-between gap-4 sticky top-0 z-30 shadow-2xs">
             <div className="flex items-center gap-3 min-w-0">
+              {/* Mobile Hamburger Button */}
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="md:hidden p-2 rounded-xl text-slate-700 hover:bg-slate-100 transition-colors border border-slate-200 shrink-0"
+                title="Abrir Menu Principal"
+              >
+                <span className="material-symbols-outlined text-[22px]">menu</span>
+              </button>
+
+              {/* Desktop Toggle Button */}
               <button
                 type="button"
                 onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-                title={isSidebarCollapsed ? 'Expandir Menu Lateral' : 'Recolher Menu Lateral'}
+                className="hidden md:flex p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                title={isSidebarCollapsed ? 'Expandir Menu' : 'Recolher Menu'}
               >
                 <span className="material-symbols-outlined text-[22px]">
-                  {isSidebarCollapsed ? 'menu' : 'menu_open'}
+                  {isSidebarCollapsed ? 'menu_open' : 'menu'}
                 </span>
               </button>
 
+              {/* Breadcrumb Title */}
               <div className="flex items-center gap-2 min-w-0">
                 <span className="text-xs font-bold text-slate-900 truncate">
-                  Amizade após Exoneração (Eng. Denis Zombo)
+                  DZMV Console
+                </span>
+                <span className="text-slate-300 text-xs hidden sm:inline">•</span>
+                <span className="text-xs text-amber-800 font-semibold truncate hidden sm:inline">
+                  {activeTab === 'leads' && 'Gestão de Leads & Encomendas'}
+                  {activeTab === 'geral' && 'Visão Geral & Métricas'}
+                  {activeTab === 'pagamentos' && 'Contas & Coordenadas bancárias'}
+                  {activeTab === 'usuarios' && 'Gestão da Equipa & Acessos'}
+                  {activeTab === 'galeria' && 'Gestão da Galeria do Autor'}
+                  {activeTab === 'whatsapp' && 'Automação & Disparos WhatsApp'}
+                  {activeTab === 'metadados' && 'Metadados da Obra'}
                 </span>
               </div>
+            </div>
+
+            {/* Quick Header Right Actions */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={onViewStore}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors"
+              >
+                <span className="material-symbols-outlined text-sm text-amber-700">storefront</span>
+                <span>Loja Landing</span>
+              </button>
+
+              <button
+                onClick={onOpenReader}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-bold transition-colors"
+              >
+                <span className="material-symbols-outlined text-sm text-amber-700">menu_book</span>
+                <span className="hidden sm:inline">Leitor Digital</span>
+              </button>
             </div>
           </header>
 
