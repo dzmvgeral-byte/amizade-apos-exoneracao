@@ -31,7 +31,21 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'leads' | 'geral' | 'pagamentos' | 'usuarios' | 'galeria' | 'whatsapp' | 'metadados'>('leads');
   const [statusFilter, setStatusFilter] = useState<'all' | 'novo' | 'contactado' | 'pago' | 'concluido' | 'alerta-fisico'>('all');
+  const [selectedProductFilter, setSelectedProductFilter] = useState<'all' | 'ebook-amizade'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const getUserFirstName = () => {
+    if (adminUser?.name) {
+      const parts = adminUser.name.trim().split(' ');
+      return parts[0];
+    }
+    if (adminUser?.email) {
+      const namePart = adminUser.email.split('@')[0];
+      if (namePart.toLowerCase().includes('denis') || namePart.toLowerCase().includes('dzmv')) return 'Dénis';
+      return namePart.charAt(0).toUpperCase() + namePart.slice(1);
+    }
+    return 'Dénis';
+  };
   const [showConfirmResetModal, setShowConfirmResetModal] = useState(false);
   
   // Banking configuration state (Express, IBAN, KWIK)
@@ -819,9 +833,15 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
 
             {/* Quick Header Right Actions */}
             <div className="flex items-center gap-2 shrink-0">
+              {/* User Account Greeting Badge */}
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs font-bold text-slate-900 shadow-2xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Olá, {getUserFirstName()}</span>
+              </div>
+
               <button
                 onClick={onViewStore}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors"
+                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm text-amber-700">storefront</span>
                 <span>Loja Landing</span>
@@ -829,7 +849,7 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
 
               <button
                 onClick={onOpenReader}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-bold transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-bold transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm text-amber-700">menu_book</span>
                 <span className="hidden sm:inline">Leitor Digital</span>
@@ -851,9 +871,9 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
               </div>
 
               <div className="flex items-center gap-2 text-xs">
-                <span className="font-semibold text-slate-700">Administrador Ativo:</span>
-                <span className="px-2 py-0.5 bg-white rounded font-bold text-amber-900 font-mono">
-                  {adminUser?.email || 'dzmv.geral@gmail.com'}
+                <span className="font-semibold text-slate-700">Sessão Ativa:</span>
+                <span className="px-2.5 py-0.5 bg-white rounded-lg font-bold text-amber-950 border border-slate-200 font-mono">
+                  Olá, {getUserFirstName()} ({adminUser?.email || 'dzmv.geral@gmail.com'})
                 </span>
               </div>
             </div>
@@ -1125,36 +1145,126 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
               </div>
             )}
 
-            {/* TAB 2: VISÃO GERAL & MÉTRICAS */}
-            {activeTab === 'geral' && (
-              <div className="space-y-6">
-                <div className="bg-white rounded-2xl p-6 border border-slate-200 space-y-4">
-                  <h3 className="font-serif-editorial text-xl font-bold text-slate-900">
-                    Desempenho Comercial do E-book
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                      <span className="text-xs text-slate-500 font-bold uppercase">Preço E-book Digital</span>
-                      <span className="text-2xl font-mono font-bold text-slate-900 block mt-1">8.500 Kz</span>
-                      <span className="text-xs text-emerald-700 font-semibold">Valor promocional activo</span>
+            {/* TAB 2: VISÃO GERAL & DESEMPENHO MULTIPRODUTO */}
+            {activeTab === 'geral' && (() => {
+              const selectedLeadsForMetrics = leads.filter(l => {
+                if (selectedProductFilter === 'ebook-amizade') {
+                  return l.format === 'ebook';
+                }
+                return true;
+              });
+
+              const paidLeadsForMetrics = selectedLeadsForMetrics.filter(l => l.status === 'pago' || l.status === 'concluido');
+              const totalRevenueForMetrics = paidLeadsForMetrics.reduce((acc, curr) => acc + (curr.amountKz || 5000), 0);
+              const conversionRateForMetrics = selectedLeadsForMetrics.length > 0 
+                ? ((paidLeadsForMetrics.length / selectedLeadsForMetrics.length) * 100).toFixed(1) 
+                : '0.0';
+              const avgTicketForMetrics = paidLeadsForMetrics.length > 0 
+                ? Math.round(totalRevenueForMetrics / paidLeadsForMetrics.length) 
+                : 5000;
+
+              return (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 space-y-6 shadow-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+                      <div>
+                        <div className="flex items-center gap-2 text-amber-800 text-xs font-bold uppercase tracking-wider">
+                          <span className="material-symbols-outlined text-[18px]">query_stats</span>
+                          <span>Relatórios & Gestão Comercial</span>
+                        </div>
+                        <h3 className="font-serif-editorial text-2xl font-bold text-slate-900 mt-1">
+                          Visão Geral de Desempenho & Métricas
+                        </h3>
+                        <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
+                          Análise consolidada de vendas, faturamento acumulado e taxa de conversão por produto do catálogo.
+                        </p>
+                      </div>
+
+                      {/* Product Selector Filter */}
+                      <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 shrink-0">
+                        <label className="text-xs font-bold text-slate-700 whitespace-nowrap flex items-center gap-1">
+                          <span className="material-symbols-outlined text-sm text-slate-500">filter_list</span>
+                          <span>Filtrar por Produto:</span>
+                        </label>
+                        <select
+                          value={selectedProductFilter}
+                          onChange={(e) => setSelectedProductFilter(e.target.value as 'all' | 'ebook-amizade')}
+                          className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                        >
+                          <option value="all">Catálogo Completo (Todos os Produtos)</option>
+                          <option value="ebook-amizade">E-book: Amizade após Exoneração (5.000 Kz)</option>
+                        </select>
+                      </div>
                     </div>
-                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                      <span className="text-xs text-slate-500 font-bold uppercase">Livro Físico (Pré-Venda)</span>
-                      <span className="text-xl font-mono font-bold text-emerald-800 block mt-1">Reserva Grátis</span>
-                      <span className="text-xs text-slate-500">Pagamento só após entrega</span>
+
+                    {/* Dynamic KPI Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="p-5 bg-gradient-to-br from-amber-50/70 to-white rounded-2xl border border-amber-200/80 shadow-xs">
+                        <span className="text-[11px] text-amber-900 font-bold uppercase tracking-wider block">
+                          Faturamento Confirmado
+                        </span>
+                        <span className="text-2xl font-mono font-bold text-amber-950 block mt-2">
+                          Kz {totalRevenueForMetrics.toLocaleString()}
+                        </span>
+                        <span className="text-[11px] text-emerald-700 font-semibold mt-1 block">
+                          {paidLeadsForMetrics.length} pedido(s) liquidado(s)
+                        </span>
+                      </div>
+
+                      <div className="p-5 bg-gradient-to-br from-slate-50 to-white rounded-2xl border border-slate-200 shadow-xs">
+                        <span className="text-[11px] text-slate-600 font-bold uppercase tracking-wider block">
+                          Preço / Valor Ativo
+                        </span>
+                        <span className="text-2xl font-mono font-bold text-slate-900 block mt-2">
+                          5.000 Kz
+                        </span>
+                        <span className="text-[11px] text-slate-500 mt-1 block">
+                          E-book Digital (Edição Oficial)
+                        </span>
+                      </div>
+
+                      <div className="p-5 bg-gradient-to-br from-emerald-50/70 to-white rounded-2xl border border-emerald-200/80 shadow-xs">
+                        <span className="text-[11px] text-emerald-900 font-bold uppercase tracking-wider block">
+                          Taxa de Conversão
+                        </span>
+                        <span className="text-2xl font-mono font-bold text-emerald-800 block mt-2">
+                          {conversionRateForMetrics}%
+                        </span>
+                        <span className="text-[11px] text-emerald-700 mt-1 block">
+                          {paidLeadsForMetrics.length} de {selectedLeadsForMetrics.length} interessados
+                        </span>
+                      </div>
+
+                      <div className="p-5 bg-gradient-to-br from-blue-50/70 to-white rounded-2xl border border-blue-200/80 shadow-xs">
+                        <span className="text-[11px] text-blue-900 font-bold uppercase tracking-wider block">
+                          Ticket Médio por Venda
+                        </span>
+                        <span className="text-2xl font-mono font-bold text-blue-950 block mt-2">
+                          Kz {avgTicketForMetrics.toLocaleString()}
+                        </span>
+                        <span className="text-[11px] text-blue-700 mt-1 block">
+                          Média por transação
+                        </span>
+                      </div>
                     </div>
-                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                      <span className="text-xs text-slate-500 font-bold uppercase">Taxa de Conversão WhatsApp</span>
-                      <span className="text-2xl font-mono font-bold text-emerald-700 block mt-1">78.4%</span>
-                      <span className="text-xs text-slate-500">Leads que concluem compra</span>
+
+                    {/* Synchronisation Notice Box */}
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600 space-y-1">
+                      <div className="flex items-center gap-2 font-bold text-slate-800">
+                        <span className="material-symbols-outlined text-amber-600 text-base">cloud_sync</span>
+                        <span>Sincronização Cloud & Vercel:</span>
+                      </div>
+                      <p className="leading-relaxed">
+                        Todos os leads e comprovativos são persistidos em tempo real na nuvem (<strong>Firebase Firestore</strong>). Caso aceda a partir do domínio da Vercel ou noutro dispositivo, a lista é automaticamente recuperada da base de dados Firebase.
+                      </p>
                     </div>
                   </div>
-                </div>
 
-                {/* Evolution Chart in Overview */}
-                <LeadsEvolutionChart leads={leads} />
-              </div>
-            )}
+                  {/* Evolution Chart in Overview */}
+                  <LeadsEvolutionChart leads={selectedLeadsForMetrics} />
+                </div>
+              );
+            })()}
 
             {/* TAB 3: CONFIGURAÇÃO DE PAGAMENTO (EXPRESS, IBAN & KWIK) */}
             {activeTab === 'pagamentos' && (
