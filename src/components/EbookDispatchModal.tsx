@@ -32,7 +32,7 @@ export const EbookDispatchModal: React.FC<EbookDispatchModalProps> = ({
     if (templateType === 'approval') {
       return `Olá, ${lead.fullName}! 🇦🇴
 
- Confirmamos com sucesso o recebimento do seu pagamento para o livro *"Amizade após Exoneração"* (Eng. Dénis Zombo • Edição Editora Sábhia).
+ Confirmamos com sucesso o recebimento do seu pagamento para o livro *"Amizade após Exoneração"* (Eng. Dénis Zombo • Edição Editora Sábhia - Brasil).
 
  📖 *O seu E-book Digital já está liberado!*
 Aceda ao livro completo, PDF HD e leitor interativo no link abaixo:

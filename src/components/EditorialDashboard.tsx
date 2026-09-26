@@ -1119,7 +1119,7 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                     <span>
                       Exibindo <strong>{filteredLeads.length}</strong> de <strong>{leads.length}</strong> leads registados
                     </span>
-                    <span className="font-semibold text-slate-700">Lançamento Oficial DZMV • Editora Sábhia Angola</span>
+                    <span className="font-semibold text-slate-700">Lançamento Oficial DZMV • Editora Sábhia (Brasil)</span>
                   </div>
                 </div>
               </div>

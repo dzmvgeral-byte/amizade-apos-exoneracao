@@ -1513,7 +1513,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span className="text-xs text-amber-800 font-semibold">{BOOK_METADATA.author}</span>
             </div>
             <p className="text-xs text-slate-500 max-w-md">
-              Lançamento e distribuição oficial DZMV. Edição, diagramação e revisão técnica da Editora Sábhia Angola.
+              Lançamento e distribuição oficial DZMV. Edição, diagramação e revisão técnica da Editora Sábhia (Brasil).
             </p>
           </div>
 
@@ -1527,7 +1527,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span className="material-symbols-outlined text-[18px] text-amber-700">admin_panel_settings</span>
               <span>Área Administrativa (Acesso Reservado)</span>
             </button>
-            <p>© 2026 DZMV. Todos os direitos reservados • Edição Editora Sábhia Angola.</p>
+            <p>© 2026 DZMV. Todos os direitos reservados • Edição Editora Sábhia (Brasil).</p>
           </div>
         </div>
       </footer>
