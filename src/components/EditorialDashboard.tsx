@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BOOK_METADATA, BankingConfig, getStoredBankingConfig, saveStoredBankingConfig, GalleryImage, getStoredGallery, saveStoredGallery, resetDefaultGallery } from '../data/bookData';
-import { Lead, AdminUser, buildAdminToLeadWhatsAppLink, getRegisteredAdmins, registerNewAdmin, deleteRegisteredAdmin, updateAdminPassword } from '../data/leadsData';
+import { Lead, AdminUser, buildAdminToLeadWhatsAppLink, getRegisteredAdmins, registerNewAdmin, deleteRegisteredAdmin, updateAdminPassword, updateAdminNameAndRole } from '../data/leadsData';
 import { changeFirebasePassword } from '../firebase';
 import { BroadcastModal } from './BroadcastModal';
 import { LeadsEvolutionChart } from './LeadsEvolutionChart';
@@ -75,6 +75,37 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
   const [userToReset, setUserToReset] = useState<{ email: string; name: string } | null>(null);
   const [resetModalNewPass, setResetModalNewPass] = useState('');
   const [resetModalError, setResetModalError] = useState<string | null>(null);
+
+  // Edit User Name & Role Modal state
+  const [editingUser, setEditingUser] = useState<{ email: string; name: string; role: string } | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [editingRole, setEditingRole] = useState('');
+  const [editUserError, setEditUserError] = useState<string | null>(null);
+
+  const handleOpenEditUser = (email: string, name: string, role: string) => {
+    setEditingUser({ email, name, role });
+    setEditingName(name);
+    setEditingRole(role);
+    setEditUserError(null);
+  };
+
+  const handleSaveUserEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    if (!editingName.trim()) {
+      setEditUserError('O nome do utilizador não pode estar em branco.');
+      return;
+    }
+    try {
+      const updatedList = updateAdminNameAndRole(editingUser.email, editingName.trim(), editingRole.trim());
+      setAdminsList(updatedList);
+      showToast('Nome e perfil do utilizador atualizados com sucesso!');
+      setEditingUser(null);
+    } catch (err: unknown) {
+      const error = err as Error;
+      setEditUserError(error.message || 'Erro ao atualizar dados do utilizador.');
+    }
+  };
 
   const handleChangeMyPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1661,10 +1692,20 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 justify-between sm:justify-end">
+                          <div className="flex items-center gap-2 justify-between sm:justify-end flex-wrap">
                             <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 text-xs font-semibold">
                               {adm.role}
                             </span>
+
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditUser(adm.email, adm.name, adm.role)}
+                              className="px-2.5 py-1 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                              title="Editar Nome e Função deste utilizador"
+                            >
+                              <span className="material-symbols-outlined text-[15px]">edit</span>
+                              <span>Editar Nome</span>
+                            </button>
 
                             <button
                               type="button"
@@ -2213,6 +2254,85 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                 >
                   <span className="material-symbols-outlined text-[18px]">save</span>
                   <span>Guardar Nova Palavra-Passe</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT USER NAME & ROLE MODAL */}
+      {editingUser && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-slate-200 animate-scale-up">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-800 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-2xl">manage_accounts</span>
+                </div>
+                <div>
+                  <h3 className="font-serif-editorial text-lg font-bold text-slate-900">
+                    Editar Nome do Utilizador
+                  </h3>
+                  <span className="text-xs text-slate-500 font-mono block">
+                    {editingUser.email}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingUser(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {editUserError && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-medium">
+                {editUserError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveUserEdit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Nome Completo do Utilizador *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  placeholder="Ex: Engenheiro Dénis Zombo Mendonça Vasco"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Função / Perfil de Acesso *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingRole}
+                  onChange={(e) => setEditingRole(e.target.value)}
+                  placeholder="Ex: Super Administrador & Autor"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors shadow-md flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">save</span>
+                  <span>Guardar Alterações</span>
                 </button>
               </div>
             </form>

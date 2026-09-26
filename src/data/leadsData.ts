@@ -279,6 +279,51 @@ export function updateAdminPassword(email: string, newPassword: string) {
   return target;
 }
 
+export function updateAdminNameAndRole(email: string, newName: string, newRole?: string) {
+  const admins = getRegisteredAdmins();
+  const target = admins.find(a => a.email.toLowerCase() === email.toLowerCase());
+  if (!target) {
+    throw new Error('Utilizador não encontrado no sistema.');
+  }
+  if (!newName || !newName.trim()) {
+    throw new Error('O nome do utilizador não pode estar em branco.');
+  }
+
+  target.name = newName.trim();
+  if (newRole && newRole.trim()) {
+    target.role = newRole.trim();
+  }
+
+  const initials = newName
+    .trim()
+    .split(' ')
+    .filter(Boolean)
+    .map(p => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() || 'AD';
+  target.avatarInitials = initials;
+
+  saveRegisteredAdmins(admins);
+
+  try {
+    const currentAdmin = getStoredAdmin();
+    if (currentAdmin && currentAdmin.email.toLowerCase() === email.toLowerCase()) {
+      const updatedCurrent: AdminUser = {
+        ...currentAdmin,
+        name: target.name,
+        role: target.role,
+        avatarInitials: target.avatarInitials,
+      };
+      setStoredAdmin(updatedCurrent);
+    }
+  } catch (e) {
+    console.warn('Error updating stored current admin:', e);
+  }
+
+  return admins;
+}
+
 export function buildWhatsAppLink(
   fullName: string,
   email: string,
