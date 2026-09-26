@@ -6,6 +6,8 @@ import {
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signOut,
+  sendPasswordResetEmail,
+  updatePassword,
   onAuthStateChanged,
   User as FirebaseUser
 } from 'firebase/auth';
@@ -101,6 +103,33 @@ export async function registerWithEmail(email: string, pass: string) {
 
 export async function logoutUser() {
   return await signOut(auth);
+}
+
+export async function sendPasswordReset(email: string) {
+  try {
+    await sendPasswordResetEmail(auth, email);
+    try {
+      const resetDocRef = doc(collection(db, 'password_resets'), `${email.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}`);
+      await setDoc(resetDocRef, {
+        email,
+        requestedAt: new Date().toISOString(),
+        status: 'email_sent',
+      });
+    } catch (e) {
+      console.warn('Firestore password reset log notice:', e);
+    }
+    return true;
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    throw error;
+  }
+}
+
+export async function changeFirebasePassword(newPass: string) {
+  if (auth.currentUser) {
+    return await updatePassword(auth.currentUser, newPass);
+  }
+  throw new Error('Nenhum utilizador autenticado no Firebase.');
 }
 
 export { onAuthStateChanged };

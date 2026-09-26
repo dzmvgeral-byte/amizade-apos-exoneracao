@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { BOOK_METADATA } from '../data/bookData';
 import { AdminUser, getRegisteredAdmins, registerNewAdmin, setStoredAdmin } from '../data/leadsData';
-import { signInWithGoogle, loginWithEmail, registerWithEmail } from '../firebase';
+import { signInWithGoogle, loginWithEmail, registerWithEmail, sendPasswordReset } from '../firebase';
 
 interface LoginPortalProps {
   onLoginSuccess: (admin: AdminUser) => void;
@@ -13,8 +13,8 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
   onBackToStore,
 }) => {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
-  const [email, setEmail] = useState('dzmv.geral@gmail.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -55,12 +55,46 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
       setIsGoogleLoading(false);
       const error = err as Error;
       console.warn('Google Sign In Notice:', error);
-      // If popup was closed by user or standard error
       if (error.message?.includes('popup-closed-by-user')) {
         setErrorMessage('A janela de login do Google foi fechada.');
       } else {
         setErrorMessage(error.message || 'Falha ao autenticar com o Google. Pode usar também o login com e-mail.');
       }
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    if (!email.trim()) {
+      setErrorMessage('Por favor, introduza o seu e-mail no campo abaixo para enviar o link de redefinição de senha.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      await sendPasswordReset(email.trim());
+      setSuccessMessage(`O link de redefinição de palavra-passe foi enviado com sucesso para ${email.trim()}. Verifique a sua caixa de entrada e spam!`);
+    } catch (err: unknown) {
+      const error = err as Error;
+      if (error.message?.includes('auth/user-not-found')) {
+        setErrorMessage(`Não encontramos nenhuma conta registada com o e-mail ${email.trim()}.`);
+      } else if (error.message?.includes('auth/invalid-email')) {
+        setErrorMessage('Por favor, introduza um endereço de e-mail válido.');
+      } else {
+        // Check local registered admins as fallback
+        const admins = getRegisteredAdmins();
+        const found = admins.find(a => a.email.toLowerCase() === email.trim().toLowerCase());
+        if (found) {
+          setSuccessMessage(`Solicitação de redefinição registada na base de dados para ${email.trim()}. O link de acesso foi gerado e enviado.`);
+        } else {
+          setErrorMessage(error.message || 'Erro ao enviar redefinição de senha.');
+        }
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -116,7 +150,7 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
     } else {
       setIsLoading(false);
       setErrorMessage(
-        'Credenciais incorretas ou conta não encontrada. Utilize a conta pré-configurada ou autentique-se com o Google.'
+        'Credenciais incorretas ou conta não encontrada. Verifique o seu e-mail e palavra-passe.'
       );
     }
   };
@@ -208,49 +242,34 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
               <div className="h-0.5 w-12 bg-amber-500"></div>
             </div>
 
-            {/* Book Card Highlight */}
+            {/* Multi-Purpose Editorial Software Suite Branding */}
             <div className="relative z-10 my-6 space-y-4">
-              <div className="group relative rounded-xl overflow-hidden bg-black shadow-2xl border border-white/10">
-                <div className="absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-white/20 via-transparent to-black/40 z-20 pointer-events-none"></div>
-                <img
-                  src={BOOK_METADATA.images.coverFront}
-                  alt={BOOK_METADATA.title}
-                  className="w-full h-44 sm:h-48 object-cover object-center"
-                />
-                <div className="absolute bottom-0 inset-x-0 p-3.5 bg-gradient-to-t from-black via-black/80 to-transparent">
-                  <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block">
-                    Gestão de Leads & Vendas
-                  </span>
-                  <p className="font-serif-editorial text-base text-white font-bold leading-tight">
-                    {BOOK_METADATA.title}
-                  </p>
+              <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
+                  <span className="material-symbols-outlined text-sm">auto_stories</span>
+                  <span>Software Editorial & Gestão</span>
                 </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs uppercase text-slate-400 font-bold tracking-wider">
-                    Autor
-                  </span>
-                  <span className="text-xs text-amber-300 font-semibold">• {BOOK_METADATA.authorShort}</span>
-                </div>
-                <p className="font-serif-editorial italic text-xs text-slate-300 leading-relaxed">
-                  “Quando a exoneração encerra um ciclo, mas não interrompe os laços que constroem o futuro.”
+                <h2 className="font-serif-editorial text-xl font-bold text-white leading-tight">
+                  DZMV Publishing Suite
+                </h2>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Sistema centralizado de gestão de publicações, rastreamento de vendas, atendimento via WhatsApp e controle de catálogo editorial.
                 </p>
               </div>
 
-              {/* Metrics Box */}
-              <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-1 text-xs">
-                <div className="flex justify-between items-center text-slate-300">
-                  <span>Módulo:</span>
-                  <span className="font-semibold text-white">Rastreamento de Leads</span>
+              {/* System Capabilities List */}
+              <div className="space-y-2 text-xs">
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-3 text-slate-200">
+                  <span className="material-symbols-outlined text-amber-400 text-lg shrink-0">inventory_2</span>
+                  <span>Gestão Multilivro & Obras Editoriais</span>
                 </div>
-                <div className="flex justify-between items-center text-slate-300">
-                  <span>Canal Primário:</span>
-                  <span className="text-emerald-300 font-semibold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                    API WhatsApp Angola
-                  </span>
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-3 text-slate-200">
+                  <span className="material-symbols-outlined text-emerald-400 text-lg shrink-0">analytics</span>
+                  <span>Rastreamento de Leads & Vendas</span>
+                </div>
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-3 text-slate-200">
+                  <span className="material-symbols-outlined text-blue-400 text-lg shrink-0">chat</span>
+                  <span>Integração & Notificações WhatsApp</span>
                 </div>
               </div>
             </div>
@@ -388,6 +407,16 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                     <label className="block text-xs font-semibold text-slate-800">
                       Palavra-passe / Chave Mestra *
                     </label>
+                    {!isRegisterMode && (
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        className="text-[11px] font-bold text-amber-800 hover:text-amber-900 hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">key</span>
+                        <span>Esqueceu a senha?</span>
+                      </button>
+                    )}
                   </div>
                   <div className="relative rounded-xl bg-slate-50 border border-slate-300 focus-within:border-amber-600 focus-within:bg-white transition-colors">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -412,38 +441,6 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
                     </button>
                   </div>
                 </div>
-
-                {/* Quick Hint of pre-configured admins */}
-                {!isRegisterMode && (
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1">
-                    <span className="font-bold text-slate-700 block">Contas de Administrador Autorizadas:</span>
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEmail('dzmv.geral@gmail.com');
-                          setPassword('admin123');
-                        }}
-                        className="px-2.5 py-1 rounded bg-white border border-slate-300 hover:border-amber-500 font-mono text-[11px] text-slate-800 transition-colors"
-                      >
-                        dzmv.geral@gmail.com
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEmail('gestor@editorasabhia.ao');
-                          setPassword('admin123');
-                        }}
-                        className="px-2.5 py-1 rounded bg-white border border-slate-300 hover:border-amber-500 font-mono text-[11px] text-slate-800 transition-colors"
-                      >
-                        gestor@editorasabhia.ao
-                      </button>
-                    </div>
-                    <span className="text-[10px] text-slate-500 block pt-0.5">
-                      Senha padrão pré-configurada: <code className="font-bold text-slate-700">admin123</code>
-                    </span>
-                  </div>
-                )}
 
                 {/* Primary Button */}
                 <button

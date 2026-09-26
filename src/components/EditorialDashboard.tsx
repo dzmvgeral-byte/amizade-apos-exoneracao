@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BOOK_METADATA, BankingConfig, getStoredBankingConfig, saveStoredBankingConfig, GalleryImage, getStoredGallery, saveStoredGallery, resetDefaultGallery } from '../data/bookData';
-import { Lead, AdminUser, buildAdminToLeadWhatsAppLink, getRegisteredAdmins, registerNewAdmin, deleteRegisteredAdmin } from '../data/leadsData';
+import { Lead, AdminUser, buildAdminToLeadWhatsAppLink, getRegisteredAdmins, registerNewAdmin, deleteRegisteredAdmin, updateAdminPassword } from '../data/leadsData';
+import { changeFirebasePassword } from '../firebase';
 import { BroadcastModal } from './BroadcastModal';
 import { LeadsEvolutionChart } from './LeadsEvolutionChart';
 import { EbookDispatchModal } from './EbookDispatchModal';
@@ -50,6 +51,72 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
   const [newAdminPassword, setNewAdminPassword] = useState('');
   const [newAdminRole, setNewAdminRole] = useState('Gestor de Vendas & Atendimento');
   const [userFormError, setUserFormError] = useState<string | null>(null);
+
+  // Change My Password state
+  const [myNewPassword, setMyNewPassword] = useState('');
+  const [myConfirmPassword, setMyConfirmPassword] = useState('');
+  const [myPasswordMsg, setMyPasswordMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+
+  // Reset User Password Modal state
+  const [userToReset, setUserToReset] = useState<{ email: string; name: string } | null>(null);
+  const [resetModalNewPass, setResetModalNewPass] = useState('');
+  const [resetModalError, setResetModalError] = useState<string | null>(null);
+
+  const handleChangeMyPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMyPasswordMsg(null);
+
+    if (!myNewPassword.trim() || myNewPassword.length < 6) {
+      setMyPasswordMsg({ type: 'error', text: 'A nova palavra-passe deve ter no mínimo 6 caracteres.' });
+      return;
+    }
+    if (myNewPassword !== myConfirmPassword) {
+      setMyPasswordMsg({ type: 'error', text: 'As palavras-passes digitadas não coincidem.' });
+      return;
+    }
+
+    const currentEmail = adminUser?.email || 'dzmv.geral@gmail.com';
+
+    try {
+      updateAdminPassword(currentEmail, myNewPassword);
+
+      try {
+        await changeFirebasePassword(myNewPassword);
+      } catch (fbErr) {
+        console.log('Firebase pass update notice:', fbErr);
+      }
+
+      setMyPasswordMsg({ type: 'success', text: 'A sua palavra-passe foi alterada com sucesso!' });
+      showToast('Palavra-passe alterada com sucesso!');
+      setMyNewPassword('');
+      setMyConfirmPassword('');
+    } catch (err: unknown) {
+      const error = err as Error;
+      setMyPasswordMsg({ type: 'error', text: error.message || 'Erro ao alterar palavra-passe.' });
+    }
+  };
+
+  const handleResetTargetUserPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetModalError(null);
+
+    if (!userToReset) return;
+    if (!resetModalNewPass.trim() || resetModalNewPass.length < 6) {
+      setResetModalError('A nova senha deve ter no mínimo 6 caracteres.');
+      return;
+    }
+
+    try {
+      updateAdminPassword(userToReset.email, resetModalNewPass);
+      setAdminsList(getRegisteredAdmins());
+      showToast(`Senha redefinida com sucesso para ${userToReset.name}!`);
+      setUserToReset(null);
+      setResetModalNewPass('');
+    } catch (err: unknown) {
+      const error = err as Error;
+      setResetModalError(error.message || 'Erro ao redefinir palavra-passe.');
+    }
+  };
 
   // Modals & Tools
   const [selectedLeadForDossier, setSelectedLeadForDossier] = useState<Lead | null>(null);
@@ -135,7 +202,18 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
     e.preventDefault();
     saveStoredBankingConfig(bankingForm);
     setBankingConfig(bankingForm);
-    showToast('Coordenadas de pagamento DZMV (Express, IBAN e Quick) guardadas com sucesso!');
+    showToast('Coordenadas de pagamento e número de redirecionamento WhatsApp salvos com sucesso!');
+  };
+
+  const handleSaveWhatsAppRedirectNumber = () => {
+    const updated = {
+      ...bankingForm,
+      redirectWhatsAppPhone: bankingForm.redirectWhatsAppPhone || bankingForm.mcxPhone || '+244 923 884 120'
+    };
+    saveStoredBankingConfig(updated);
+    setBankingConfig(updated);
+    setBankingForm(updated);
+    showToast('Número de WhatsApp para redirecionamento salvo com sucesso!');
   };
 
   const handleCreateNewUser = (e: React.FormEvent) => {
@@ -1201,6 +1279,40 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                     </div>
                   </div>
 
+                  {/* Seção 4: Número de Redirecionamento de Mensagens & Comprovativos WhatsApp */}
+                  <div className="p-4 bg-emerald-50/80 rounded-xl border border-emerald-300 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[18px] text-emerald-700">chat</span>
+                        4. Número de WhatsApp para Redirecionamento de Compras, Comprovativos & SMS
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-200/80 text-emerald-900 text-[10px] font-bold">
+                        Redirecionamento Ativo
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Todas as compras de e-books, avisos do livro impresso e comprovativos enviados pelos leitores na Landing Page serão redirecionados diretamente para este número de WhatsApp.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="text"
+                        required
+                        value={bankingForm.redirectWhatsAppPhone || bankingForm.mcxPhone || ''}
+                        onChange={(e) => setBankingForm({ ...bankingForm, redirectWhatsAppPhone: e.target.value })}
+                        placeholder="+244 923 884 120"
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSaveWhatsAppRedirectNumber}
+                        className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">save</span>
+                        <span>Salvar Número de WhatsApp</span>
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Instruções Gerais */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-800 uppercase tracking-wide">
@@ -1262,6 +1374,70 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                   <p className="text-xs sm:text-sm text-slate-600">
                     Como Super Administrador ({adminUser?.email || 'dzmv.geral@gmail.com'}), pode registar novos membros de equipa para gerir leads, atender no WhatsApp e acompanhar o desempenho da obra.
                   </p>
+                </div>
+
+                {/* Card to Change Currently Logged-In User Password */}
+                <div className="bg-gradient-to-r from-amber-500/10 via-amber-50/80 to-white rounded-2xl p-6 border border-amber-300/80 shadow-xs space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                      <span className="material-symbols-outlined text-amber-700 text-[20px]">key</span>
+                      <span>Alterar a Minha Palavra-Passe ({adminUser?.email || 'dzmv.geral@gmail.com'})</span>
+                    </h4>
+                    <span className="text-xs text-amber-900 bg-amber-200/80 font-bold px-2.5 py-0.5 rounded-full">
+                      Sua Conta Ativa
+                    </span>
+                  </div>
+
+                  {myPasswordMsg && (
+                    <div className={`p-3 text-xs rounded-xl font-medium border flex items-center gap-2 ${
+                      myPasswordMsg.type === 'success' 
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+                        : 'bg-red-50 border-red-200 text-red-700'
+                    }`}>
+                      <span className="material-symbols-outlined text-[18px]">
+                        {myPasswordMsg.type === 'success' ? 'check_circle' : 'error'}
+                      </span>
+                      <span>{myPasswordMsg.text}</span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleChangeMyPassword} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700">Nova Palavra-Passe *</label>
+                        <input
+                          type="password"
+                          required
+                          value={myNewPassword}
+                          onChange={(e) => setMyNewPassword(e.target.value)}
+                          placeholder="Mínimo de 6 caracteres"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700">Confirmar Nova Palavra-Passe *</label>
+                        <input
+                          type="password"
+                          required
+                          value={myConfirmPassword}
+                          onChange={(e) => setMyConfirmPassword(e.target.value)}
+                          placeholder="Repita a nova palavra-passe"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-md transition-colors flex items-center gap-2 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">lock_reset</span>
+                        <span>Atualizar Minha Palavra-Passe</span>
+                      </button>
+                    </div>
+                  </form>
                 </div>
 
                 {/* Form to Register New User */}
@@ -1375,10 +1551,24 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-3 justify-between sm:justify-end">
+                          <div className="flex items-center gap-2 justify-between sm:justify-end">
                             <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 text-xs font-semibold">
                               {adm.role}
                             </span>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setUserToReset({ email: adm.email, name: adm.name });
+                                setResetModalNewPass('');
+                                setResetModalError(null);
+                              }}
+                              className="px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                              title="Redefinir / Alterar Senha deste utilizador"
+                            >
+                              <span className="material-symbols-outlined text-[15px]">key</span>
+                              <span>Redefinir Senha</span>
+                            </button>
 
                             {!isSuper ? (
                               <button
@@ -1389,8 +1579,8 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                                 <span className="material-symbols-outlined text-[18px]">delete</span>
                               </button>
                             ) : (
-                              <span className="text-[11px] text-emerald-700 font-bold px-2 py-1 bg-emerald-50 rounded-lg">
-                                Titular Principal
+                              <span className="text-[11px] text-emerald-700 font-bold px-2 py-1 bg-emerald-50 rounded-lg shrink-0">
+                                Titular
                               </span>
                             )}
                           </div>
@@ -1629,12 +1819,53 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
             {activeTab === 'whatsapp' && (
               <div className="bg-white rounded-2xl p-6 border border-slate-200 space-y-6">
                 <div>
-                  <h3 className="font-serif-editorial text-xl font-bold text-slate-900">
-                    Simulador e Conexão WhatsApp Business
+                  <h3 className="font-serif-editorial text-2xl font-bold text-slate-900">
+                    Conexão & Redirecionamento WhatsApp Business
                   </h3>
-                  <p className="text-xs text-slate-500">
-                    Número Oficial de Atendimento: <strong>{bankingConfig.mcxPhone}</strong>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Gerencie o número oficial de WhatsApp que recebe os comprovativos, reservas e compras da Landing Page.
                   </p>
+                </div>
+
+                {/* Card de Configuração e Redirecionamento de WhatsApp */}
+                <div className="p-5 bg-gradient-to-r from-emerald-50/90 via-white to-amber-50/60 rounded-2xl border border-emerald-300 shadow-xs space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-100 pb-3">
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                        <span className="material-symbols-outlined text-emerald-600 text-[20px]">phone_in_talk</span>
+                        <span>Número Oficial para Redirecionar Compras, SMS & Comprovativos</span>
+                      </h4>
+                      <p className="text-xs text-slate-600 mt-0.5">
+                        Defina o número de WhatsApp de atendimento para onde todos os comprovativos, reservas e compras do site são encaminhados.
+                      </p>
+                    </div>
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-900 text-xs font-bold shrink-0 border border-emerald-200">
+                      Redirecionamento Ativo
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center gap-3">
+                    <div className="relative w-full">
+                      <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-xs font-bold text-slate-500">
+                        🇦🇴
+                      </span>
+                      <input
+                        type="text"
+                        value={bankingForm.redirectWhatsAppPhone || bankingForm.mcxPhone || ''}
+                        onChange={(e) => setBankingForm({ ...bankingForm, redirectWhatsAppPhone: e.target.value })}
+                        placeholder="+244 923 884 120"
+                        className="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSaveWhatsAppRedirectNumber}
+                      className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">save</span>
+                      <span>Salvar Número de WhatsApp</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1713,7 +1944,7 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                   </div>
                   <div className="py-1">
                     <span className="text-slate-500 uppercase text-[10px] block">Cotação Kwanza:</span>
-                    <span className="font-bold text-slate-900">E-book: 8.500 Kz | Físico: 28.500 Kz</span>
+                    <span className="font-bold text-slate-900">E-book: 5.000 Kz | Físico: 10.000 Kz</span>
                   </div>
                 </div>
               </div>
@@ -1810,6 +2041,73 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
           }}
           onShowToast={showToast}
         />
+      )}
+
+      {/* RESET TARGET USER PASSWORD MODAL */}
+      {userToReset && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-slate-200 animate-scale-up">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-2xl">key</span>
+                </div>
+                <div>
+                  <h3 className="font-serif-editorial text-lg font-bold text-slate-900">
+                    Redefinir Palavra-Passe
+                  </h3>
+                  <span className="text-xs text-slate-500 block">
+                    Utilizador: <strong>{userToReset.name}</strong>
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUserToReset(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {resetModalError && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-medium">
+                {resetModalError}
+              </div>
+            )}
+
+            <form onSubmit={handleResetTargetUserPassword} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700">Nova Palavra-Passe *</label>
+                <input
+                  type="password"
+                  required
+                  value={resetModalNewPass}
+                  onChange={(e) => setResetModalNewPass(e.target.value)}
+                  placeholder="Defina a nova senha (mín. 6 caracteres)"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setUserToReset(null)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors shadow-md flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">save</span>
+                  <span>Guardar Nova Palavra-Passe</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

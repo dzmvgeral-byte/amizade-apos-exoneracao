@@ -982,7 +982,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     ? 'Multicaixa Express' 
                     : paymentMethod === 'iban' 
                     ? 'Transferência IBAN' 
-                    : 'Transferência KWIK'
+                    : 'Transferência KWIK',
+                  bankingConfig.redirectWhatsAppPhone || bankingConfig.mcxPhone
                 )}
                 target="_blank"
                 rel="noopener noreferrer"

@@ -29,6 +29,7 @@ export interface BankingConfig {
   kwikNibOrPhone: string;
   kwikBank: string;
   instructions: string;
+  redirectWhatsAppPhone?: string;
 }
 
 export const DEFAULT_BANKING_CONFIG: BankingConfig = {
@@ -39,7 +40,8 @@ export const DEFAULT_BANKING_CONFIG: BankingConfig = {
   kwikAccountName: "Dénis Zombo Mendonça Vasco (DZMV)",
   kwikNibOrPhone: "+244 923 884 120",
   kwikBank: "Rede KWIK (EMIS) / BAI Directo",
-  instructions: "Efetue o pagamento via Multicaixa Express, Transferência IBAN ou Transferência KWIK e anexe o comprovativo no WhatsApp para liberação imediata do seu E-book."
+  instructions: "Efetue o pagamento via Multicaixa Express, Transferência IBAN ou Transferência KWIK e anexe o comprovativo no WhatsApp para liberação imediata do seu E-book.",
+  redirectWhatsAppPhone: "+244 923 884 120"
 };
 
 const BANKING_STORAGE_KEY = 'dzmv_banking_config_v1';
@@ -58,6 +60,7 @@ export function getStoredBankingConfig(): BankingConfig {
       kwikAccountName: parsed.kwikAccountName || parsed.quickAccountName || DEFAULT_BANKING_CONFIG.kwikAccountName,
       kwikNibOrPhone: parsed.kwikNibOrPhone || parsed.quickNibOrPhone || DEFAULT_BANKING_CONFIG.kwikNibOrPhone,
       kwikBank: parsed.kwikBank || parsed.quickBank || DEFAULT_BANKING_CONFIG.kwikBank,
+      redirectWhatsAppPhone: parsed.redirectWhatsAppPhone || parsed.mcxPhone || DEFAULT_BANKING_CONFIG.redirectWhatsAppPhone,
     };
   } catch {
     return DEFAULT_BANKING_CONFIG;

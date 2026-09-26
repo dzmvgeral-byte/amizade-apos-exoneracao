@@ -1,3 +1,5 @@
+import { getStoredBankingConfig } from './bookData';
+
 export interface Lead {
   id: string;
   fullName: string;
@@ -263,6 +265,20 @@ export function deleteRegisteredAdmin(adminEmail: string) {
   return filtered;
 }
 
+export function updateAdminPassword(email: string, newPassword: string) {
+  const admins = getRegisteredAdmins();
+  const target = admins.find(a => a.email.toLowerCase() === email.toLowerCase());
+  if (!target) {
+    throw new Error('Utilizador não encontrado no sistema.');
+  }
+  if (!newPassword || newPassword.trim().length < 6) {
+    throw new Error('A nova senha deve ter no mínimo 6 caracteres.');
+  }
+  target.password = newPassword.trim();
+  saveRegisteredAdmins(admins);
+  return target;
+}
+
 export function buildWhatsAppLink(
   fullName: string,
   email: string,
@@ -270,9 +286,26 @@ export function buildWhatsAppLink(
   province: string = 'Luanda',
   format: 'ebook' | 'fisico' = 'ebook',
   wantsPhysicalAlert: boolean = false,
-  paymentMethod: string = 'Multicaixa Express'
+  paymentMethod: string = 'Multicaixa Express',
+  customWhatsAppPhone?: string
 ): string {
-  const officialPhone = '244923884120';
+  let targetNumber = customWhatsAppPhone || '';
+  if (!targetNumber) {
+    try {
+      const cfg = getStoredBankingConfig();
+      targetNumber = cfg.redirectWhatsAppPhone || cfg.mcxPhone || '244923884120';
+    } catch {
+      targetNumber = '244923884120';
+    }
+  }
+
+  let officialPhone = targetNumber.replace(/[^0-9]/g, '');
+  if (officialPhone.length === 9 && (officialPhone.startsWith('9') || officialPhone.startsWith('2'))) {
+    officialPhone = `244${officialPhone}`;
+  }
+  if (!officialPhone) {
+    officialPhone = '244923884120';
+  }
   
   let physicalAlertNote = '';
   if (wantsPhysicalAlert) {
