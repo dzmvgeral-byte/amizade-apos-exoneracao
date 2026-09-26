@@ -140,8 +140,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const handleConfirmData = () => {
     setIsProcessing(true);
 
-    const price = BOOK_METADATA.prices.ebookKz;
-    const priceFormatted = BOOK_METADATA.prices.ebookFormatted;
+    const isPhysical = format === 'fisico';
+    const price = isPhysical ? BOOK_METADATA.prices.physicalKz : BOOK_METADATA.prices.ebookKz;
+    const priceFormatted = isPhysical ? BOOK_METADATA.prices.physicalFormatted : BOOK_METADATA.prices.ebookFormatted;
+    const formatLabelText = isPhysical ? 'Livro Físico Impresso (Com Capa & Orelhas)' : 'E-book Digital (PDF + ePub)';
+
     const cleanPhone = whatsapp.startsWith('+244') ? whatsapp : `+244 ${whatsapp.trim()}`;
     const paymentMethodLabel = paymentMethod === 'express' 
       ? 'Multicaixa Express' 
@@ -150,7 +153,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       : 'Transferência KWIK';
 
     // 1. Build the personalized WhatsApp message URL
-    const whatsappUrl = buildWhatsAppLink(fullName, email, cleanPhone, province, 'ebook', wantsPhysicalAlert, paymentMethodLabel);
+    const whatsappUrl = buildWhatsAppLink(fullName, email, cleanPhone, province, format, wantsPhysicalAlert, paymentMethodLabel);
     setSubmittedWhatsAppUrl(whatsappUrl);
 
     // 2. Register lead
@@ -160,8 +163,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       email: email.trim(),
       phone: cleanPhone,
       province: province,
-      format: 'ebook',
-      formatLabel: 'E-book Digital (PDF + ePub)',
+      format: format,
+      formatLabel: formatLabelText,
       amountKz: price,
       amountFormatted: priceFormatted,
       paymentMethod: paymentMethodLabel,
@@ -169,9 +172,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       statusLabel: 'Novo Lead',
       createdAt: 'Agora mesmo',
       timestamp: Date.now(),
-      notes: wantsPhysicalAlert
-        ? `Pagamento: ${paymentMethodLabel}. Solicitou aviso da versão física.`
-        : `Pagamento: ${paymentMethodLabel}. Aquisição oficial do E-book.`,
+      notes: isPhysical
+        ? `Pagamento: ${paymentMethodLabel}. Aquisição oficial do Livro Físico Impresso (10.000 Kz).`
+        : `Pagamento: ${paymentMethodLabel}. Aquisição oficial do E-book Digital (5.000 Kz).`,
       whatsappMessageSent: true,
       wantsPhysicalAlert: wantsPhysicalAlert,
     };
@@ -198,7 +201,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="flex items-center gap-2.5 mx-auto md:mx-0">
             <span className="inline-flex w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
             <span className="font-bold tracking-widest uppercase text-amber-300 text-[11px]">
-              Lançamento Oficial DZMV 2025
+              Lançamento Oficial DZMV 2026
             </span>
             <span className="text-white/30 hidden sm:inline">•</span>
             <span className="text-slate-200 text-xs font-medium hidden sm:inline">
@@ -268,7 +271,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </span>
               <span className="text-slate-300">•</span>
               <span className="text-slate-600 text-xs tracking-wide uppercase font-semibold">
-                Edição Editora Sábhia 2025
+                Edição Editora Sábhia 2026
               </span>
             </div>
 
@@ -294,7 +297,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600 font-semibold">
                     <span className="flex items-center gap-1 text-amber-700 font-bold">
                       <span className="material-symbols-outlined text-[15px]">auto_stories</span>
-                      E-book + Impresso 2025
+                      E-book + Impresso 2026
                     </span>
                     <span>{BOOK_METADATA.authorShort}</span>
                   </div>
@@ -320,7 +323,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     {BOOK_METADATA.prices.ebookOriginalFormatted}
                   </span>
                   <span className="px-2 py-0.5 rounded text-[11px] sm:text-xs font-bold bg-amber-100 text-amber-900 tracking-wide shrink-0 whitespace-nowrap">
-                    -42% OFF
+                    -50% OFF
                   </span>
                 </div>
               </div>
@@ -461,38 +464,88 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <div className="bg-white p-6 sm:p-10 rounded-3xl shadow-xl border border-slate-200 flex flex-col gap-6">
             <form onSubmit={handleInitiateRegistration} className="space-y-6">
-              {/* Formato Selecionado: Foco 100% no E-book Digital */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-50/80 to-amber-50/40 border border-amber-300/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
-                <div className="flex items-center gap-3.5">
-                  <img
-                    src={BOOK_METADATA.images.secondaryCover}
-                    alt="Edição do Livro Amizade após Exoneração"
-                    className="w-12 h-16 sm:w-14 sm:h-20 object-cover rounded-xl shadow-md border border-amber-300/80 shrink-0"
-                  />
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] uppercase tracking-wider font-bold text-amber-900">
-                        Item Selecionado
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200 text-amber-950 uppercase tracking-wide whitespace-nowrap">
-                        PDF HD + ePub Fluído
+              {/* Formato Selecionado: Escolha entre E-book Digital (5.000 Kz) e Livro Físico Impresso (10.000 Kz) */}
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-slate-900 block">
+                  Escolha o Formato da Obra *
+                </label>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Opção E-book Digital */}
+                  <div
+                    onClick={() => setFormat('ebook')}
+                    className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between gap-3 ${
+                      format === 'ebook'
+                        ? 'border-amber-600 bg-amber-50/80 shadow-md ring-1 ring-amber-500'
+                        : 'border-slate-200 bg-slate-50/60 hover:bg-slate-100/80'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`material-symbols-outlined text-[20px] ${format === 'ebook' ? 'text-amber-700' : 'text-slate-400'}`}>
+                          {format === 'ebook' ? 'radio_button_checked' : 'radio_button_unchecked'}
+                        </span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                          E-book Digital
+                        </span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200 text-amber-950">
+                        PDF HD + ePub
                       </span>
                     </div>
-                    <strong className="text-base sm:text-lg text-slate-900 block leading-snug font-serif-editorial">
-                      E-book Digital Completo
-                    </strong>
-                    <span className="text-xs text-slate-600 block leading-normal">
-                      Envio imediato no WhatsApp e para o seu e-mail
-                    </span>
+
+                    <div>
+                      <strong className="text-sm sm:text-base font-bold text-slate-900 block leading-snug font-serif-editorial">
+                        E-book Digital Completo
+                      </strong>
+                      <span className="text-xs text-slate-600 block mt-0.5">
+                        Envio imediato no WhatsApp e e-mail
+                      </span>
+                    </div>
+
+                    <div className="pt-2 border-t border-amber-200/60 flex items-baseline justify-between">
+                      <span className="text-xs text-slate-400 line-through">10.000 Kz</span>
+                      <span className="font-mono text-lg font-bold text-amber-900">5.000 Kz</span>
+                    </div>
                   </div>
-                </div>
-                <div className="text-left sm:text-right shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-amber-200/60 w-full sm:w-auto">
-                  <span className="text-xs text-slate-400 line-through block font-medium">
-                    18.000 Kz
-                  </span>
-                  <span className="font-mono text-xl sm:text-2xl font-bold text-amber-900 block">
-                    8.500 Kz
-                  </span>
+
+                  {/* Opção Livro Físico Impresso */}
+                  <div
+                    onClick={() => setFormat('fisico')}
+                    className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between gap-3 ${
+                      format === 'fisico'
+                        ? 'border-amber-600 bg-amber-50/80 shadow-md ring-1 ring-amber-500'
+                        : 'border-slate-200 bg-slate-50/60 hover:bg-slate-100/80'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`material-symbols-outlined text-[20px] ${format === 'fisico' ? 'text-amber-700' : 'text-slate-400'}`}>
+                          {format === 'fisico' ? 'radio_button_checked' : 'radio_button_unchecked'}
+                        </span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                          Livro Físico
+                        </span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-800">
+                        Edição Impressa
+                      </span>
+                    </div>
+
+                    <div>
+                      <strong className="text-sm sm:text-base font-bold text-slate-900 block leading-snug font-serif-editorial">
+                        Livro Físico Impresso
+                      </strong>
+                      <span className="text-xs text-slate-600 block mt-0.5">
+                        Com Capa, Orelhas e Envio Prioritário
+                      </span>
+                    </div>
+
+                    <div className="pt-2 border-t border-amber-200/60 flex items-baseline justify-between">
+                      <span className="text-xs text-slate-400">Edição Papel</span>
+                      <span className="font-mono text-lg font-bold text-slate-900">10.000 Kz</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1124,10 +1177,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               Repercussão & Leitura Crítica
             </span>
             <h2 className="font-serif-editorial text-3xl sm:text-4xl text-[#0B0F19] font-bold">
-              O Que Dizem os Líderes em Angola
+              O Que Dizem os Leitores
             </h2>
             <p className="text-sm text-slate-600">
-              Depoimentos de gestores públicos, profissionais de saúde e quadros executivos em Luanda e nas províncias.
+              Avaliações e impressões de quem já adquiriu a obra do Eng. Dénis Zombo.
             </p>
           </div>
 
@@ -1146,12 +1199,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </p>
               </div>
               <div className="pt-5 mt-5 border-t border-slate-100 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-900 text-xs">
-                  AM
+                <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">verified</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-bold text-slate-900 text-xs sm:text-sm">Dr. A. Morais</span>
-                  <span className="text-xs text-slate-500">Ex-Diretor Provincial de Saúde, Huambo</span>
+                  <span className="font-bold text-slate-900 text-xs sm:text-sm">Leitor Verificado</span>
+                  <span className="text-xs text-slate-500">Avaliação da Obra</span>
                 </div>
               </div>
             </div>
@@ -1166,16 +1219,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <span className="material-symbols-outlined text-[18px]">star</span>
                 </div>
                 <p className="text-sm text-slate-700 italic leading-relaxed">
-                  “Todo dirigente público em Angola deveria ter este livro sobre a secretária antes de assinar o primeiro despacho. Ensina-nos a nunca nos embriagarmos pelo cargo, pois o cargo é passageiro, a honra é eterna.”
+                  “Todo dirigente público deveria ter este livro sobre a secretária antes de assinar o primeiro despacho. Ensina-nos a nunca nos embriagarmos pelo cargo, pois o cargo é passageiro, a honra é eterna.”
                 </p>
               </div>
               <div className="pt-5 mt-5 border-t border-slate-100 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-900 text-xs">
-                  EC
+                <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">verified</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-bold text-slate-900 text-xs sm:text-sm">Eng.ª Esperança Costa</span>
-                  <span className="text-xs text-slate-500">Consultora de Gestão de Ativos, Luanda</span>
+                  <span className="font-bold text-slate-900 text-xs sm:text-sm">Leitor Verificado</span>
+                  <span className="text-xs text-slate-500">Avaliação da Obra</span>
                 </div>
               </div>
             </div>
@@ -1194,12 +1247,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </p>
               </div>
               <div className="pt-5 mt-5 border-t border-slate-100 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-900 text-xs">
-                  JV
+                <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-700 flex items-center justify-center font-bold text-xs shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">verified</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-bold text-slate-900 text-xs sm:text-sm">Joaquim Valente</span>
-                  <span className="text-xs text-slate-500">Administrador Hospitalar, Cunene</span>
+                  <span className="font-bold text-slate-900 text-xs sm:text-sm">Leitor Verificado</span>
+                  <span className="text-xs text-slate-500">Avaliação da Obra</span>
                 </div>
               </div>
             </div>
@@ -1473,7 +1526,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span className="material-symbols-outlined text-[18px] text-amber-700">admin_panel_settings</span>
               <span>Área Administrativa (Acesso Reservado)</span>
             </button>
-            <p>© 2025 DZMV. Todos os direitos reservados • Edição Editora Sábhia Angola.</p>
+            <p>© 2026 DZMV. Todos os direitos reservados • Edição Editora Sábhia Angola.</p>
           </div>
         </div>
       </footer>
@@ -1510,7 +1563,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               E-book Oficial
             </span>
             <span className="font-mono text-base font-bold text-slate-900 leading-tight">
-              8.500 Kz
+              {BOOK_METADATA.prices.ebookFormatted}
             </span>
           </div>
 

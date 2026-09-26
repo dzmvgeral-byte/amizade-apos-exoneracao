@@ -60,11 +60,13 @@ Muito obrigado pela confiança! Qualquer dúvida sobre o leitor ou ficheiros, re
         coord = `🏦 *IBAN:* ${bankingConfig.iban} (${bankingConfig.bank})\n👤 *Titular:* ${bankingConfig.beneficiary}`;
       }
 
+      const itemPrice = lead.amountFormatted || (lead.format === 'fisico' ? '10.000 Kz' : '5.000 Kz');
+
       return `Olá, ${lead.fullName}! 🇦🇴
 
 Aqui é da equipa oficial DZMV (Lançamento da obra *"Amizade após Exoneração"* do Eng. Dénis Zombo).
 
-Registamos o seu pedido para o *E-book Digital Completo (8.500 Kz)*.
+Registamos o seu pedido para o *${lead.formatLabel} (${itemPrice})*.
 
  Coordenadas para Pagamento (${lead.paymentMethod}):
 ${coord}

@@ -38,7 +38,7 @@ const DEFAULT_ADMINS: (AdminUser & { password?: string })[] = [
     name: 'Eng. Dénis Zombo',
     role: 'Super Administrador & Autor',
     avatarInitials: 'DZ',
-    createdAt: '24/09/2025',
+    createdAt: '24/09/2026',
     isSuperAdmin: true,
   },
   {
@@ -48,7 +48,7 @@ const DEFAULT_ADMINS: (AdminUser & { password?: string })[] = [
     name: 'Gestor Editorial Sábhia',
     role: 'Gestor de Vendas & Atendimento',
     avatarInitials: 'GE',
-    createdAt: '24/09/2025',
+    createdAt: '24/09/2026',
     isSuperAdmin: false,
   },
 ];
@@ -279,12 +279,16 @@ export function buildWhatsAppLink(
     physicalAlertNote = `\n🔔 *Interesse Adicional:* Sim, desejo ser avisado(a) quando o Livro Físico Impresso estiver disponível.`;
   }
 
+  const isPhysical = format === 'fisico';
+  const formatText = isPhysical ? 'Livro Físico Impresso (Com Capa & Orelhas)' : 'E-book Digital Completo (PDF HD + ePub)';
+  const priceText = isPhysical ? '10.000 Kz' : '5.000 Kz';
+
   const text = `Olá, equipa DZMV! 🇦🇴
 
 Acabei de concluir o meu registo na plataforma oficial para o livro:
 📖 *"Amizade após Exoneração"* — Eng. Dénis Zombo
-📦 Formato: E-book Digital Completo (PDF HD + ePub)
-💰 Valor: 8.500 Kz
+📦 Formato: ${formatText}
+💰 Valor: ${priceText}
 💳 Forma de Pagamento Escolhida: *${paymentMethod}*
 
 📋 *Meus Dados de Registo:*
@@ -346,12 +350,14 @@ Por favor, confirme se prefere o envio direto aqui pelo WhatsApp ou no seu e-mai
       ? `\n📦 *Nota Registada:* Confirmamos que solicitou aviso prioritário para quando a tiragem impressa física estiver pronta.`
       : '';
 
+    const priceLabel = lead.format === 'fisico' ? '10.000 Kz' : '5.000 Kz';
+
     text = `Olá, ${lead.fullName}! 🇦🇴
 
 Aqui é da equipa oficial DZMV. Confirmamos a receção do seu pedido para o livro *"Amizade após Exoneração"* do Eng. Dénis Zombo.
 
 📋 *Detalhes do Pedido:*
-• Item: ${lead.formatLabel} (8.500 Kz)
+• Item: ${lead.formatLabel} (${priceLabel})
 • Método Escolhido: ${lead.paymentMethod}
 • Província: ${lead.province}${physicalNote}
 

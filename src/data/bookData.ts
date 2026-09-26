@@ -147,13 +147,13 @@ export const BOOK_METADATA = {
   authorShort: "Eng. Dénis Zombo",
   publisher: "Editora Sábhia",
   isbn: "978-989-53-482-1",
-  edition: "1ª Edição Oficial • Angola 2025",
+  edition: "1ª Edição Oficial • Angola 2026",
   prices: {
-    ebookKz: 8500,
-    ebookFormatted: "8.500 Kz",
-    ebookOriginalFormatted: "18.000 Kz",
-    physicalKz: 0,
-    physicalFormatted: "Reserva Gratuita (Pague na Entrega)",
+    ebookKz: 5000,
+    ebookFormatted: "5.000 Kz",
+    ebookOriginalFormatted: "10.000 Kz",
+    physicalKz: 10000,
+    physicalFormatted: "10.000 Kz",
     usdReference: "1 USD ≈ 920 Kz"
   },
   academicBackground: [
@@ -169,7 +169,7 @@ export const BOOK_METADATA = {
     { role: "Chefe da Secção Administrativa", place: "Direcção Municipal da Saúde do Longonjo", period: "2015 – 2016" },
     { role: "Chefe de Recursos Humanos", place: "Hospital Municipal do Longonjo", period: "2009 – 2011" },
     { role: "Enfermeiro", place: "Hospital Municipal do Longonjo", period: "Desde 2007" },
-    { role: "Coordenador do Projecto de Apoio a Grupos Vulneráveis", place: "Cachungo-Chiumbo", period: "2006 – 2007" },
+    { role: "Coordenador do Projecto de Apoio a Grupos Vulneráveis", place: "Cachiungo - Chiumbo", period: "2006 – 2007" },
     { role: "Coordenador de Voluntários no Combate às DTS/HIV/SIDA", place: "Cruz Vermelha de Angola, Huambo", period: "2004 – 2005" }
   ],
   complementaryTrainings: [
