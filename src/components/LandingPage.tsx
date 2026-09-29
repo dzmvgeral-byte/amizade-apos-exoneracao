@@ -460,7 +460,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-[18px] text-amber-600">auto_stories</span>
                     <span className="text-[11px] uppercase font-bold tracking-wider">
-                      Edição Oficial com Orelhas & E-book
+                      Edição Oficial
                     </span>
                   </div>
                   <span className="font-semibold text-slate-900">{BOOK_METADATA.authorShort}</span>
