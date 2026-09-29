@@ -336,17 +336,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="relative max-w-7xl mx-auto px-6 lg:px-12 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           {/* Left Editorial Column */}
           <div className="lg:col-span-7 flex flex-col gap-6">
-            <div className="inline-flex items-center gap-2.5 w-fit px-3.5 py-1.5 rounded-full bg-white border border-slate-200 shadow-xs">
-              <span className="material-symbols-outlined text-[18px] text-amber-600">verified</span>
-              <span className="text-amber-900 uppercase tracking-widest text-xs font-bold">
-                Lançamento Oficial DZMV
-              </span>
-              <span className="text-slate-300">•</span>
-              <span className="text-slate-600 text-xs tracking-wide uppercase font-semibold">
-                Edição Editora Sábhia 2026
-              </span>
-            </div>
-
             <div className="flex flex-col gap-3">
               <h1 className="font-serif-editorial text-4xl sm:text-5xl lg:text-6xl text-[#0B0F19] tracking-tight font-bold leading-tight">
                 {BOOK_METADATA.title}
@@ -474,10 +463,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* SECTION 2: EDITORIAL PHILOSOPHY & QUOTE */}
       <section className="w-full bg-[#111726] text-white py-20 px-6 lg:px-12 border-y border-white/10 relative overflow-hidden">
         <div className="max-w-4xl mx-auto text-center flex flex-col items-center gap-6 relative">
-          <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-amber-400">
-            <span className="material-symbols-outlined text-2xl">format_quote</span>
-          </div>
-
           <blockquote className="font-serif-editorial text-2xl sm:text-3xl md:text-4xl italic text-white leading-relaxed">
             “{BOOK_METADATA.quote}”
           </blockquote>
@@ -1603,13 +1588,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <p className="text-xs sm:text-sm text-slate-400">
               Momentos de liderança, trajetória institucional e bastidores da obra. Passe o cursor ou toque para ver em detalhe.
             </p>
-          </div>
-
-          <div className="flex items-center gap-2 text-xs text-slate-400 shrink-0">
-            <span className="inline-flex items-center gap-1 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg">
-              <span className="material-symbols-outlined text-amber-400 text-sm">swipe</span>
-              <span>Arrastamento suave contínuo (Direita ➔ Esquerda)</span>
-            </span>
           </div>
         </div>
 
