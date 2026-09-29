@@ -6,6 +6,7 @@ export interface Lead {
   email: string;
   phone: string;
   province: string;
+  address?: string;
   format: 'ebook' | 'fisico';
   formatLabel: string;
   amountKz: number;
@@ -332,7 +333,8 @@ export function buildWhatsAppLink(
   format: 'ebook' | 'fisico' = 'ebook',
   wantsPhysicalAlert: boolean = false,
   paymentMethod: string = 'Multicaixa Express',
-  customWhatsAppPhone?: string
+  customWhatsAppPhone?: string,
+  address?: string
 ): string {
   let targetNumber = customWhatsAppPhone || '';
   if (!targetNumber) {
@@ -361,6 +363,11 @@ export function buildWhatsAppLink(
   const formatText = isPhysical ? 'Livro Físico Impresso (Com Capa & Orelhas)' : 'E-book Digital Completo (PDF HD + ePub)';
   const priceText = isPhysical ? '10.000 Kz' : '5.000 Kz';
 
+  let deliveryNote = '';
+  if (isPhysical && address) {
+    deliveryNote = `\n📍 *Endereço de Entrega (Angola):* ${address.trim()}\n🏛️ *Província:* ${province}`;
+  }
+
   const text = `Olá, equipa DZMV! 🇦🇴
 
 Acabei de concluir o meu registo na plataforma oficial para o livro:
@@ -372,9 +379,9 @@ Acabei de concluir o meu registo na plataforma oficial para o livro:
 📋 *Meus Dados de Registo:*
 👤 Nome: ${fullName.trim()}
 📧 E-mail: ${email.trim()}
-📱 WhatsApp: ${phone.trim()}${physicalAlertNote}
+📱 WhatsApp: ${phone.trim()}${deliveryNote}${physicalAlertNote}
 
-📎 *Comprovativo:* Finalizei o pagamento e estou a anexar o meu comprovativo aqui nesta mensagem para que possam validar, aprovar e enviar os ficheiros digitais. Muito obrigado!`;
+📎 *Comprovativo:* Finalizei o pagamento e estou a anexar o meu comprovativo aqui nesta mensagem para que possam validar, aprovar e enviar o livro. Muito obrigado!`;
 
   return `https://wa.me/${officialPhone}?text=${encodeURIComponent(text)}`;
 }
@@ -405,9 +412,9 @@ Aqui é da equipa oficial DZMV (Lançamento da obra *"Amizade após Exoneração
 
 ✅ *Confirmamos com sucesso a validação do seu pagamento para o ${lead.formatLabel}!*
 
-Os seus ficheiros digitais em alta definição (PDF HD + ePub) com assinatura de autenticidade já se encontram prontos para envio.
+${lead.format === 'fisico' && lead.address ? `O seu exemplar físico será expedido para o endereço: *${lead.address} (${lead.province})*. Em breve partilharemos o código de entrega!` : `Os seus ficheiros digitais em alta definição (PDF HD + ePub) com assinatura de autenticidade já se encontram prontos para envio.
 
-Por favor, confirme se prefere o envio direto aqui pelo WhatsApp ou no seu e-mail cadastrado (${lead.email}). Estamos à disposição!`;
+Por favor, confirme se prefere o envio direto aqui pelo WhatsApp ou no seu e-mail cadastrado (${lead.email}). Estamos à disposição!`}`;
   } else {
     const isExpress = lead.paymentMethod.toLowerCase().includes('express');
     const isKwik = lead.paymentMethod.toLowerCase().includes('kwik') || lead.paymentMethod.toLowerCase().includes('quick');
@@ -428,6 +435,8 @@ Por favor, confirme se prefere o envio direto aqui pelo WhatsApp ou no seu e-mai
       ? `\n📦 *Nota Registada:* Confirmamos que solicitou aviso prioritário para quando a tiragem impressa física estiver pronta.`
       : '';
 
+    const addressNote = lead.address ? `\n📍 Endereço de Entrega: ${lead.address}` : '';
+
     const priceLabel = lead.format === 'fisico' ? '10.000 Kz' : '5.000 Kz';
 
     text = `Olá, ${lead.fullName}! 🇦🇴
@@ -437,12 +446,12 @@ Aqui é da equipa oficial DZMV. Confirmamos a receção do seu pedido para o liv
 📋 *Detalhes do Pedido:*
 • Item: ${lead.formatLabel} (${priceLabel})
 • Método Escolhido: ${lead.paymentMethod}
-• Província: ${lead.province}${physicalNote}
+• Província: ${lead.province}${addressNote}${physicalNote}
 
 💳 *Coordenadas para Liquidação:*
 ${paymentDetail}
 
-Assim que efetuar o pagamento (KWIK, Express ou IBAN), basta partilhar o talão/comprovativo aqui neste chat para liberarmos imediatamente o seu E-book. Qualquer dúvida estamos à disposição!`;
+Assim que efetuar o pagamento (KWIK, Express ou IBAN), basta partilhar o talão/comprovativo aqui neste chat para confirmarmos a sua encomenda. Qualquer dúvida estamos à disposição!`;
   }
 
   return `https://wa.me/${cleanNumber}?text=${encodeURIComponent(text)}`;

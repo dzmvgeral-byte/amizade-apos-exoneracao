@@ -30,6 +30,8 @@ export default function App() {
       setAdminUser(loadedAdmin);
     }
 
+    let unsubscribeLeads: (() => void) | null = null;
+
     // Subscribe to Firebase Auth state
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
@@ -47,20 +49,27 @@ export default function App() {
         };
         setAdminUser(userObj);
         setStoredAdmin(userObj);
-      }
-    });
 
-    // Subscribe to Firestore Realtime Leads
-    const unsubscribeLeads = subscribeToFirestoreLeads((remoteLeads) => {
-      if (remoteLeads && remoteLeads.length > 0) {
-        setLeads(remoteLeads);
-        saveStoredLeads(remoteLeads);
+        // When authenticated as admin, activate realtime leads sync
+        if (!unsubscribeLeads) {
+          unsubscribeLeads = subscribeToFirestoreLeads((remoteLeads) => {
+            if (remoteLeads && remoteLeads.length > 0) {
+              setLeads(remoteLeads);
+              saveStoredLeads(remoteLeads);
+            }
+          });
+        }
+      } else {
+        if (unsubscribeLeads) {
+          unsubscribeLeads();
+          unsubscribeLeads = null;
+        }
       }
     });
 
     return () => {
       unsubscribeAuth();
-      if (typeof unsubscribeLeads === 'function') {
+      if (unsubscribeLeads) {
         unsubscribeLeads();
       }
     };

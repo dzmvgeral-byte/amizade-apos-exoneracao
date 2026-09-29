@@ -156,8 +156,25 @@ export const BOOK_METADATA = {
     ebookFormatted: "5.000 Kz",
     ebookOriginalFormatted: "10.000 Kz",
     physicalKz: 10000,
-    physicalFormatted: "10.000 Kz",
-    usdReference: "1 USD ≈ 920 Kz"
+    physicalFormatted: "10.000 Kz (Brevemente em Angola)",
+    physicalBrlFormatted: "R$ 47,40",
+    physicalBrlInstallments: "ou 2x de R$ 24,95",
+    usdReference: "1 USD ≈ 920 Kz",
+    externalStores: {
+      amazon: {
+        name: "Amazon",
+        url: "https://www.amazon.com.br/dp/6529018514?ref=cm_sw_r_ffobk_cp_ud_dp_BRD3NA1FDX8AZMCQ6SVF",
+        priceBrl: "R$ 47,40",
+        installments: "ou 2x R$ 24,95/mês",
+        badge: "Livro Físico Impresso • Entrega Internacional & Brasil"
+      },
+      mercadoLivre: {
+        name: "Mercado Livre Brasil",
+        url: "https://www.mercadolivre.com.br/amizade-apos-exoneracao-vida-apos-exoneracao/up/MLBU4975647477",
+        priceBrl: "R$ 47,40",
+        badge: "Livro Físico Impresso • Brasil"
+      }
+    }
   },
   academicBackground: [
     { title: "Técnico Superior em Electromedicina", institution: "Instituto Superior Politécnico do Huambo", year: "2015" },

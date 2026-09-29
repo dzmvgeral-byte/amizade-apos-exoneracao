@@ -7,7 +7,7 @@ import {
   updateDoc, 
   deleteDoc 
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../firebase';
+import { db, auth } from '../firebase';
 import { Lead } from '../data/leadsData';
 
 const LEADS_COLLECTION = 'leads';
@@ -20,15 +20,19 @@ export async function saveLeadToFirestore(lead: Lead): Promise<void> {
       updatedAt: new Date().toISOString()
     });
   } catch (error) {
-    console.warn('Firestore offline or permission notice, fallback handled:', error);
-    // Even if firestore offline, the local state continues
+    console.warn('Firestore offline fallback handled:', error);
   }
 }
 
 export function subscribeToFirestoreLeads(
   onData: (leads: Lead[]) => void,
   onError?: (err: Error) => void
-) {
+): () => void {
+  // Only subscribe if an authenticated user exists (prevents unauthorized attempts and offline errors)
+  if (!auth.currentUser) {
+    return () => {};
+  }
+
   try {
     const leadsRef = collection(db, LEADS_COLLECTION);
     return onSnapshot(
@@ -45,12 +49,10 @@ export function subscribeToFirestoreLeads(
         }
       },
       (error) => {
-        console.warn('Realtime subscription notice:', error);
         if (onError) onError(error);
       }
     );
   } catch (err) {
-    console.warn('Firestore subscribe initial warning:', err);
     return () => {};
   }
 }

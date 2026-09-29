@@ -1071,11 +1071,20 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                               </div>
                             </td>
 
-                            {/* Província */}
+                            {/* Província & Endereço */}
                             <td className="py-4 px-4">
                               <span className="px-2.5 py-1 bg-slate-100 text-slate-800 rounded-md font-semibold text-xs inline-block">
                                 {lead.province}
                               </span>
+                              {lead.address && (
+                                <div className="mt-1.5 p-1.5 bg-amber-50 rounded-lg border border-amber-200 text-[11px] text-amber-950 max-w-[200px] leading-tight">
+                                  <span className="font-bold flex items-center gap-1 text-amber-800">
+                                    <span className="material-symbols-outlined text-[13px]">home_pin</span>
+                                    Entrega Física:
+                                  </span>
+                                  <span className="block mt-0.5 break-words">{lead.address}</span>
+                                </div>
+                              )}
                             </td>
 
                             {/* Formato e Método de Pagamento */}

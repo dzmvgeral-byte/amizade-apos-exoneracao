@@ -15,12 +15,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 }) => {
   // Checkout form state & refs
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const addressInputRef = useRef<HTMLInputElement>(null);
   const [showMobileBottomBar, setShowMobileBottomBar] = useState(false);
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [province, setProvince] = useState('Luanda');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
   const [format, setFormat] = useState<'ebook' | 'fisico'>('ebook');
   const [wantsPhysicalAlert, setWantsPhysicalAlert] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'express' | 'iban' | 'kwik'>('express');
@@ -63,7 +65,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const scrollToCheckoutAndFocus = (
     options?: 'ebook' | 'fisico' | { requestPhysicalAlert?: boolean }
   ) => {
-    setFormat('ebook');
+    if (options === 'fisico') {
+      setFormat('fisico');
+    } else if (options === 'ebook') {
+      setFormat('ebook');
+    }
     if (typeof options === 'object' && options?.requestPhysicalAlert) {
       setWantsPhysicalAlert(true);
     }
@@ -127,6 +133,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const handleInitiateRegistration = (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim() || !email.trim() || !whatsapp.trim()) return;
+    if (format === 'fisico' && !deliveryAddress.trim()) {
+      if (addressInputRef.current) {
+        addressInputRef.current.focus();
+      }
+      return;
+    }
     setShowSummaryModal(true);
   };
 
@@ -142,8 +154,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
     const isPhysical = format === 'fisico';
     const price = isPhysical ? BOOK_METADATA.prices.physicalKz : BOOK_METADATA.prices.ebookKz;
-    const priceFormatted = isPhysical ? BOOK_METADATA.prices.physicalFormatted : BOOK_METADATA.prices.ebookFormatted;
+    const priceFormatted = isPhysical ? '10.000 Kz' : BOOK_METADATA.prices.ebookFormatted;
     const formatLabelText = isPhysical ? 'Livro Físico Impresso (Com Capa & Orelhas)' : 'E-book Digital (PDF + ePub)';
+
+    const fullAddress = isPhysical
+      ? deliveryAddress.trim()
+      : undefined;
 
     const cleanPhone = whatsapp.startsWith('+244') ? whatsapp : `+244 ${whatsapp.trim()}`;
     const paymentMethodLabel = paymentMethod === 'express' 
@@ -153,7 +169,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       : 'Transferência KWIK';
 
     // 1. Build the personalized WhatsApp message URL
-    const whatsappUrl = buildWhatsAppLink(fullName, email, cleanPhone, province, format, wantsPhysicalAlert, paymentMethodLabel);
+    const whatsappUrl = buildWhatsAppLink(
+      fullName, 
+      email, 
+      cleanPhone, 
+      province, 
+      format, 
+      wantsPhysicalAlert, 
+      paymentMethodLabel,
+      undefined,
+      fullAddress
+    );
     setSubmittedWhatsAppUrl(whatsappUrl);
 
     // 2. Register lead
@@ -163,6 +189,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       email: email.trim(),
       phone: cleanPhone,
       province: province,
+      address: fullAddress,
       format: format,
       formatLabel: formatLabelText,
       amountKz: price,
@@ -173,8 +200,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       createdAt: 'Agora mesmo',
       timestamp: Date.now(),
       notes: isPhysical
-        ? `Pagamento: ${paymentMethodLabel}. Aquisição oficial do Livro Físico Impresso (10.000 Kz).`
-        : `Pagamento: ${paymentMethodLabel}. Aquisição oficial do E-book Digital (5.000 Kz).`,
+        ? `Pagamento: ${paymentMethodLabel}. Livro Físico Impresso (10.000 Kz). Endereço de Entrega: ${fullAddress} (${province}).`
+        : `Pagamento: ${paymentMethodLabel}. E-book Digital (5.000 Kz).`,
       whatsappMessageSent: true,
       wantsPhysicalAlert: wantsPhysicalAlert,
     };
@@ -195,30 +222,86 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <div className="w-full bg-[#FBFBFE] font-sans text-[#141B2B] antialiased">
-      {/* TOP ANNOUNCEMENT RIBBON */}
-      <div className="w-full bg-[#0B0F19] text-white py-2.5 px-4 sm:px-6 border-b border-white/10 text-xs">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5 mx-auto md:mx-0">
-            <span className="inline-flex w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-            <span className="font-bold tracking-widest uppercase text-amber-300 text-[11px]">
-              Lançamento Oficial DZMV 2026
-            </span>
-            <span className="text-white/30 hidden sm:inline">•</span>
-            <span className="text-slate-200 text-xs font-medium hidden sm:inline">
-              Edição Oficial Editora Sábhia • Despacho Imediato em PDF + ePub no WhatsApp
-            </span>
-          </div>
+      {/* CONTINUOUS RUNNING TICKER / MARQUEE BAR */}
+      <aside aria-label="Avisos e Preços Disponíveis" className="w-full bg-[#0B0F19] text-white py-2.5 overflow-hidden border-b border-amber-500/20 relative z-30 select-none">
+        <div className="flex animate-marquee-rtl items-center">
+          {/* We repeat the ticker list twice for a seamless infinite scroll */}
+          {[0, 1].map((copyIndex) => (
+            <div key={copyIndex} className="flex items-center gap-6 sm:gap-10 shrink-0 pr-6 sm:pr-10 text-xs sm:text-[13px]">
+              {/* Item 1: Angola E-book */}
+              <a
+                href="#formatos"
+                onClick={(e) => {
+                  e.preventDefault();
+                  scrollToCheckoutAndFocus('ebook');
+                }}
+                className="inline-flex items-center gap-2 hover:text-amber-300 transition-colors group cursor-pointer"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="font-bold text-amber-300">🇦🇴 Angola:</span>
+                <span className="text-slate-200">E-book Digital disponível por</span>
+                <span className="font-mono font-bold text-white bg-amber-600/40 px-2 py-0.5 rounded text-amber-300 border border-amber-500/30">
+                  5.000 Kz
+                </span>
+              </a>
 
-          <div className="hidden md:flex items-center gap-4 text-xs text-slate-300">
-            <span className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px] text-amber-300">lock</span>
-              Ambiente Seguro DZMV
-            </span>
-            <span className="text-white/20">|</span>
-            <span className="font-semibold text-amber-300">Pagamento em Kwanza (Kz)</span>
-          </div>
+              <span className="text-amber-500/40 font-bold">•</span>
+
+              {/* Item 2: Angola Livro Físico */}
+              <a
+                href="#formatos"
+                onClick={(e) => {
+                  e.preventDefault();
+                  scrollToCheckoutAndFocus('fisico');
+                }}
+                className="inline-flex items-center gap-2 hover:text-amber-300 transition-colors group cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px] text-amber-400">menu_book</span>
+                <span className="font-bold text-amber-300">🇦🇴 Angola:</span>
+                <span className="text-slate-200">Livro Físico Impresso por</span>
+                <span className="font-mono font-bold text-white bg-white/10 px-2 py-0.5 rounded text-amber-200 border border-white/20">
+                  10.000 Kz
+                </span>
+              </a>
+
+              <span className="text-amber-500/40 font-bold">•</span>
+
+              {/* Item 3: Brasil e Exterior Livro Físico */}
+              <a
+                href="#formatos"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const target = document.getElementById('formatos');
+                  if (target) target.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="inline-flex items-center gap-2 hover:text-amber-300 transition-colors group cursor-pointer"
+              >
+                <span className="text-base">🇧🇷 🌍</span>
+                <span className="font-bold text-amber-300">Brasil & Exterior:</span>
+                <span className="text-slate-200">Livro Físico Impresso disponível por</span>
+                <span className="font-mono font-bold text-white bg-emerald-500/20 px-2 py-0.5 rounded text-emerald-300 border border-emerald-500/40">
+                  R$ 47,40
+                </span>
+                <span className="text-[11px] text-slate-300 font-medium">na <strong>Amazon</strong> e <strong>Mercado Livre Brasil</strong></span>
+              </a>
+
+              <span className="text-amber-500/40 font-bold">•</span>
+
+              {/* Item 4: Lançamento Oficial */}
+              <div className="inline-flex items-center gap-2 text-slate-300">
+                <span className="material-symbols-outlined text-[16px] text-amber-400">verified</span>
+                <span className="font-bold text-white">Lançamento Oficial DZMV 2026</span>
+                <span className="text-white/30">|</span>
+                <span className="text-amber-200 font-medium">Eng. Dénis Zombo</span>
+                <span className="text-white/30">•</span>
+                <span className="text-slate-400 text-[11px]">Editora Sábhia (Brasil)</span>
+              </div>
+
+              <span className="text-amber-500/40 font-bold">•</span>
+            </div>
+          ))}
         </div>
-      </div>
+      </aside>
 
       {/* HEADER BAR */}
       <header className="sticky top-0 left-0 right-0 w-full z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
@@ -239,23 +322,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </a>
 
           {/* Desktop Nav Links */}
-          <nav className="hidden lg:flex items-center gap-4 xl:gap-7 text-[11px] xl:text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">
+          <nav className="hidden md:flex items-center gap-5 lg:gap-8 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">
             <a href="#a-obra" className="hover:text-amber-800 transition-colors">A Obra</a>
             <a href="#formatos" className="hover:text-amber-800 transition-colors">Formatos & Preços</a>
             <a href="#sobre-o-autor" className="hover:text-amber-800 transition-colors">O Autor</a>
             <a href="#faq" className="hover:text-amber-800 transition-colors">Dúvidas</a>
           </nav>
-
-          {/* Action Group */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            <button
-              onClick={() => scrollToCheckoutAndFocus('ebook')}
-              className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4.5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-amber-600 text-white text-xs sm:text-sm font-bold hover:bg-amber-700 transition-all shadow-xs shrink-0 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px] sm:text-[18px]">shopping_cart</span>
-              <span className="whitespace-nowrap">Comprar E-book</span>
-            </button>
-          </div>
         </div>
       </header>
 
@@ -310,32 +382,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </p>
 
             {/* Investment & Conversion Bar */}
-            <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6 my-2">
+            <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5 my-2">
               <div className="flex flex-col">
-                <span className="text-xs text-slate-500 uppercase tracking-wider font-bold">
-                  Preço Promocional de Lançamento
-                </span>
-                <div className="flex items-baseline gap-2.5 sm:gap-3 mt-1.5 flex-wrap">
-                  <span className="font-mono text-2xl sm:text-3xl lg:text-4xl text-[#0B0F19] font-bold whitespace-nowrap">
-                    {BOOK_METADATA.prices.ebookFormatted}
-                  </span>
-                  <span className="text-sm sm:text-base line-through text-slate-400 font-medium whitespace-nowrap">
-                    {BOOK_METADATA.prices.ebookOriginalFormatted}
-                  </span>
-                  <span className="px-2 py-0.5 rounded text-[11px] sm:text-xs font-bold bg-amber-100 text-amber-900 tracking-wide shrink-0 whitespace-nowrap">
-                    -50% OFF
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-800 uppercase tracking-wider">
+                  <span className="material-symbols-outlined text-[17px] text-amber-600">auto_stories</span>
+                  <span>Formatos Disponíveis</span>
+                </div>
+                <div className="mt-1">
+                  <strong className="text-lg sm:text-xl font-bold text-[#0B0F19] font-serif-editorial block leading-snug">
+                    Edição Digital (E-book) & Livro Físico Impresso
+                  </strong>
+                  <span className="text-xs text-slate-500 block mt-0.5">
+                    Opções para Angola (Kwanzas) e Brasil/Exterior (Amazon & Mercado Livre Brasil)
                   </span>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col sm:flex-row gap-3 shrink-0">
                 <button
                   id="hero-buy-btn"
                   onClick={() => scrollToCheckoutAndFocus('ebook')}
                   className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-amber-600 text-white text-sm font-bold hover:bg-amber-700 transition-all shadow-md text-center cursor-pointer"
                 >
-                  <span className="material-symbols-outlined text-[20px]">download</span>
-                  <span>Comprar E-book Agora</span>
+                  <span className="material-symbols-outlined text-[20px]">shopping_cart</span>
+                  <span>Comprar Livro</span>
                 </button>
                 <button
                   onClick={onOpenReader}
@@ -452,14 +522,167 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <div className="text-center flex flex-col gap-2">
             <span className="text-xs font-bold uppercase tracking-widest text-amber-700">
-              Edição Digital Oficial • Formato & Aquisição
+              Edição Oficial • Opções de Adquirição Globais
             </span>
             <h2 className="font-serif-editorial text-3xl sm:text-4xl text-[#0B0F19] tracking-tight font-bold">
-              Garantir o Seu E-book Interativo
+              Garantir o Seu Exemplar (E-book ou Físico)
             </h2>
-            <p className="text-sm sm:text-base text-slate-600">
-              Preencha os seus dados de contacto para registo da encomenda e receba o ficheiro diretamente no seu WhatsApp com garantia editorial.
+            <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto">
+              Disponível em formato <strong>E-book Digital (5.000 Kz)</strong> para Angola e em <strong>Livro Físico Impresso</strong> no Brasil/Internacional (Amazon e Mercado Livre).
             </p>
+          </div>
+
+          {/* GLOBAL PURCHASING CHANNELS CARD (ANGOLA VS INTERNATIONAL / BRASIL) */}
+          <div className="bg-[#0B0F19] text-white p-6 sm:p-8 rounded-3xl space-y-6 border border-slate-800 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider">
+                  <span className="material-symbols-outlined text-[18px]">public</span>
+                  <span>Canais de Venda Globais</span>
+                </div>
+                <h3 className="font-serif-editorial text-xl sm:text-2xl font-bold text-white">
+                  Onde Adquirir a Obra Segundo a Sua Localização
+                </h3>
+              </div>
+              <span className="px-3 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full text-xs font-bold shrink-0 self-start sm:self-center">
+                Edição Oficial 2026
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              {/* Card A: Angola */}
+              <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-4 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🇦🇴</span>
+                    <span className="font-bold text-sm text-amber-300 uppercase tracking-wider">Leitores em Angola</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Adquira o <strong>E-book Digital (5.000 Kz)</strong> com envio imediato no WhatsApp via Multicaixa Express, IBAN ou KWIK.
+                  </p>
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-200 space-y-1">
+                    <strong className="block font-semibold text-amber-300 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-base">print</span>
+                      <span>Livro Físico em Angola:</span>
+                    </strong>
+                    <p className="text-[11px] text-slate-300">
+                      Impressão local brevemente em Angola. Inscreva-se no formulário abaixo para ativar o alerta gratuito por WhatsApp!
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => scrollToCheckoutAndFocus('ebook')}
+                  className="w-full py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                >
+                  <span className="material-symbols-outlined text-base">download</span>
+                  <span>Comprar E-book em Kwanzas (5.000 Kz)</span>
+                </button>
+              </div>
+
+              {/* Card B: Brasil / Exterior */}
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-950/40 via-slate-900 to-slate-900 border border-amber-500/30 space-y-4 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🇧🇷 🌍</span>
+                      <span className="font-bold text-sm text-amber-300 uppercase tracking-wider">Brasil & Exterior</span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
+                      Físico Já Disponível
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Para quem está no Brasil ou no exterior, o <strong>Livro Físico Impresso</strong> já está disponível para envio imediato:
+                  </p>
+
+                  <div className="space-y-3 pt-1">
+                    {/* Card Amazon */}
+                    <a
+                      href={BOOK_METADATA.prices.externalStores.amazon.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block p-4 sm:p-5 rounded-2xl bg-white/10 hover:bg-white/[0.15] border border-amber-400/30 hover:border-amber-400 transition-all shadow-md group cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/10">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                            <span className="material-symbols-outlined text-2xl">shopping_cart</span>
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-base sm:text-lg font-bold text-white group-hover:text-amber-300 transition-colors leading-tight">
+                              Amazon
+                            </h4>
+                            <span className="text-[11px] text-slate-300 block mt-0.5">
+                              Livro Físico Impresso
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <span className="font-mono text-base sm:text-lg font-bold text-amber-300 block leading-tight">
+                            R$ 47,40
+                          </span>
+                          <span className="text-[10px] text-amber-200/80 block mt-0.5">
+                            ou 2x R$ 24,95/mês
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-3 flex items-center justify-between gap-3">
+                        <span className="text-[11px] text-slate-300 hidden sm:inline">Entrega Internacional & Brasil</span>
+                        <span className="w-full sm:w-auto py-2.5 px-4 bg-amber-500 group-hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors shadow-xs">
+                          <span>Comprar na Amazon</span>
+                          <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                        </span>
+                      </div>
+                    </a>
+
+                    {/* Card Mercado Livre Brasil */}
+                    <a
+                      href={BOOK_METADATA.prices.externalStores.mercadoLivre.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block p-4 sm:p-5 rounded-2xl bg-white/10 hover:bg-white/[0.15] border border-amber-400/30 hover:border-amber-400 transition-all shadow-md group cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/10">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                            <span className="material-symbols-outlined text-2xl">local_shipping</span>
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-base sm:text-lg font-bold text-white group-hover:text-amber-300 transition-colors leading-tight">
+                              Mercado Livre Brasil
+                            </h4>
+                            <span className="text-[11px] text-slate-300 block mt-0.5">
+                              Livro Físico Impresso
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <span className="font-mono text-base sm:text-lg font-bold text-amber-300 block leading-tight">
+                            R$ 47,40
+                          </span>
+                          <span className="text-[10px] text-emerald-300 block mt-0.5 font-medium">
+                            Entrega no Brasil
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-3 flex items-center justify-between gap-3">
+                        <span className="text-[11px] text-slate-300 hidden sm:inline">Envio em Todo o Brasil</span>
+                        <span className="w-full sm:w-auto py-2.5 px-4 bg-amber-500 group-hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors shadow-xs">
+                          <span>Comprar no Mercado Livre Brasil</span>
+                          <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                        </span>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="bg-white p-6 sm:p-10 rounded-3xl shadow-xl border border-slate-200 flex flex-col gap-6">
@@ -467,7 +690,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {/* Formato Selecionado: Escolha entre E-book Digital (5.000 Kz) e Livro Físico Impresso (10.000 Kz) */}
               <div className="space-y-3">
                 <label className="text-sm font-bold text-slate-900 block">
-                  Escolha o Formato da Obra *
+                  Escolha o Formato do Seu Pedido em Kwanzas *
                 </label>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -537,16 +760,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         Livro Físico Impresso
                       </strong>
                       <span className="text-xs text-slate-600 block mt-0.5">
-                        Com Capa, Orelhas e Envio Prioritário
+                        Impressão em Angola Brevemente
                       </span>
                     </div>
 
                     <div className="pt-2 border-t border-amber-200/60 flex items-baseline justify-between">
-                      <span className="text-xs text-slate-400">Edição Papel</span>
-                      <span className="font-mono text-lg font-bold text-slate-900">10.000 Kz</span>
+                      <span className="text-xs text-slate-400">Angola</span>
+                      <span className="font-mono text-sm sm:text-base font-bold text-slate-900">Brevemente (10.000 Kz)</span>
                     </div>
                   </div>
                 </div>
+
+                {/* Helpful Context banner when Physical format is selected */}
+                {format === 'fisico' && (
+                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-slate-800 space-y-2 animate-fade-in">
+                    <div className="flex items-center gap-2 font-bold text-amber-900">
+                      <span className="material-symbols-outlined text-amber-700 text-lg">info</span>
+                      <span>Disponibilidade do Livro Físico:</span>
+                    </div>
+                    <p className="leading-relaxed text-slate-700">
+                      🇦🇴 <strong>Em Angola:</strong> A edição impressa será lançada brevemente. Ao preencher o formulário abaixo, ficará automaticamente registado(a) na lista prioritária de reserva local!
+                    </p>
+                    <p className="leading-relaxed text-slate-700 pt-1 border-t border-amber-200/60">
+                      🇧🇷 🌍 <strong>No Brasil / Exterior:</strong> Se reside no Brasil ou no exterior, já pode adquirir o livro físico impresso por <strong>R$ 47,40</strong> na <a href={BOOK_METADATA.prices.externalStores.amazon.url} target="_blank" rel="noopener noreferrer" className="font-bold underline text-amber-900 hover:text-amber-950">Amazon</a> ou no <a href={BOOK_METADATA.prices.externalStores.mercadoLivre.url} target="_blank" rel="noopener noreferrer" className="font-bold underline text-amber-900 hover:text-amber-950">Mercado Livre Brasil</a>.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Name */}
@@ -614,47 +853,112 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
               </div>
 
-              {/* Checkbox: Desejo ser avisado quando o livro físico estiver pronto */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/70 border border-amber-200/90 transition-all hover:bg-amber-50">
-                <label className="flex items-start gap-3.5 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={wantsPhysicalAlert}
-                    onChange={(e) => setWantsPhysicalAlert(e.target.checked)}
-                    className="w-5 h-5 rounded border-slate-300 text-amber-600 focus:ring-amber-500 mt-1 accent-amber-600 cursor-pointer shrink-0"
-                  />
-                  <div className="flex flex-col text-xs text-slate-700 min-w-0">
-                    <span className="font-bold text-slate-900 text-sm flex items-start sm:items-center gap-2 leading-snug">
-                      <span className="material-symbols-outlined text-amber-700 text-[20px] shrink-0 mt-0.5 sm:mt-0">notifications_active</span>
-                      <span>Desejo ser avisado(a) quando o Livro Físico Impresso estiver pronto</span>
+              {/* Delivery Address Section ONLY when Livro Físico is selected */}
+              {format === 'fisico' ? (
+                <div className="p-5 rounded-2xl bg-amber-50/90 border-2 border-amber-400 space-y-4 animate-fade-in shadow-xs">
+                  <div className="flex items-center justify-between gap-2 border-b border-amber-200/80 pb-3">
+                    <div className="flex items-center gap-2 text-amber-950 font-bold text-sm">
+                      <span className="material-symbols-outlined text-amber-700 text-[22px]">local_shipping</span>
+                      <span>Endereço de Entrega do Livro Físico em Angola *</span>
+                    </div>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-200 text-amber-950">
+                      Obrigatório para Envio
                     </span>
-                    <p className="text-slate-600 mt-1 leading-relaxed">
-                      Será notificado(a) gratuitamente via WhatsApp assim que a edição impressa estiver disponível.
+                  </div>
+
+                  {/* Província */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs sm:text-sm font-semibold text-slate-800" htmlFor="order-province">
+                      Província de Entrega *
+                    </label>
+                    <div className="relative">
+                      <span className="material-symbols-outlined absolute left-3.5 top-3.5 text-slate-400 text-[20px]">
+                        location_city
+                      </span>
+                      <select
+                        id="order-province"
+                        required
+                        value={province}
+                        onChange={(e) => setProvince(e.target.value)}
+                        className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors"
+                      >
+                        {['Luanda', 'Benguela', 'Huambo', 'Huíla', 'Cabinda', 'Cuanza Sul', 'Cuanza Norte', 'Uíge', 'Zaire', 'Malanje', 'Bié', 'Moxico', 'Lunda Norte', 'Lunda Sul', 'Namibe', 'Cunene', 'Quando Cubango', 'Bengo'].map((p) => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Endereço Completo & Ponto de Referência */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs sm:text-sm font-semibold text-slate-800" htmlFor="order-address">
+                      Endereço Completo (Rua, Nº da Casa e Ponto de Referência) *
+                    </label>
+                    <div className="relative">
+                      <span className="material-symbols-outlined absolute left-3.5 top-3.5 text-slate-400 text-[20px]">
+                        home_pin
+                      </span>
+                      <input
+                        ref={addressInputRef}
+                        id="order-address"
+                        type="text"
+                        required={format === 'fisico'}
+                        value={deliveryAddress}
+                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                        placeholder="Ex: Talatona, Bairro Benfica, Rua Direita das Acácias, Casa 14, próximo ao Banco BAI"
+                        className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-colors"
+                      />
+                    </div>
+                    <p className="text-[11px] text-slate-600">
+                      Indique o seu endereço completo para que a transportadora ou equipa editorial possa entregar o seu livro em mãos.
                     </p>
                   </div>
-                </label>
-              </div>
+                </div>
+              ) : (
+                /* Checkbox: Desejo ser avisado quando o livro físico estiver pronto (apenas para quem compra e-book) */
+                <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/70 border border-amber-200/90 transition-all hover:bg-amber-50">
+                  <label className="flex items-start gap-3.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={wantsPhysicalAlert}
+                      onChange={(e) => setWantsPhysicalAlert(e.target.checked)}
+                      className="w-5 h-5 rounded border-slate-300 text-amber-600 focus:ring-amber-500 mt-1 accent-amber-600 cursor-pointer shrink-0"
+                    />
+                    <div className="flex flex-col text-xs text-slate-700 min-w-0">
+                      <span className="font-bold text-slate-900 text-sm flex items-start sm:items-center gap-2 leading-snug">
+                        <span className="material-symbols-outlined text-amber-700 text-[20px] shrink-0 mt-0.5 sm:mt-0">notifications_active</span>
+                        <span>Desejo ser avisado(a) quando o Livro Físico Impresso estiver pronto</span>
+                      </span>
+                      <p className="text-slate-600 mt-1 leading-relaxed">
+                        Será notificado(a) gratuitamente via WhatsApp assim que a edição impressa estiver disponível.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              )}
 
               {/* Recap Bar */}
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <img
                     src={BOOK_METADATA.images.secondaryCover}
-                    alt="E-book Amizade após Exoneração"
+                    alt={format === 'fisico' ? "Livro Físico Impresso" : "E-book Digital"}
                     className="w-10 h-14 object-cover rounded-lg shadow-2xs border border-slate-300 shrink-0"
                   />
                   <div>
                     <span className="text-sm font-bold text-slate-900 block">
-                      Amizade após Exoneração • E-book Digital
+                      {format === 'fisico' ? 'Amizade após Exoneração • Livro Físico' : 'Amizade após Exoneração • E-book Digital'}
                     </span>
                     <span className="text-xs text-slate-500">
-                      {BOOK_METADATA.author} {wantsPhysicalAlert ? '• (+ Alerta Livro Físico Ativado)' : ''}
+                      {format === 'fisico'
+                        ? `Edição Impressa com Orelhas • Entrega em ${province}`
+                        : `${BOOK_METADATA.author} ${wantsPhysicalAlert ? '• (+ Alerta Livro Físico Ativado)' : ''}`}
                     </span>
                   </div>
                 </div>
                 <div className="text-right">
                   <span className="font-mono text-xl sm:text-2xl font-bold text-slate-900 block">
-                    {BOOK_METADATA.prices.ebookFormatted}
+                    {format === 'fisico' ? '10.000 Kz' : BOOK_METADATA.prices.ebookFormatted}
                   </span>
                 </div>
               </div>
@@ -740,7 +1044,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <span className="material-symbols-outlined text-base text-amber-600">menu_book</span>
                     Produto / Item:
                   </span>
-                  <strong className="text-slate-900 text-right">E-book Digital (PDF HD + ePub)</strong>
+                  <strong className="text-slate-900 text-right">
+                    {format === 'fisico' ? 'Livro Físico Impresso (Com Orelhas)' : 'E-book Digital (PDF HD + ePub)'}
+                  </strong>
                 </div>
 
                 <div className="py-2.5 flex justify-between items-center gap-3">
@@ -749,11 +1055,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     Valor Total:
                   </span>
                   <strong className="text-slate-900 font-mono text-base font-bold text-amber-800">
-                    {BOOK_METADATA.prices.ebookFormatted}
+                    {format === 'fisico' ? '10.000 Kz' : BOOK_METADATA.prices.ebookFormatted}
                   </strong>
                 </div>
 
-                {wantsPhysicalAlert && (
+                {format === 'fisico' && (
+                  <>
+                    <div className="py-2.5 flex justify-between items-center gap-3">
+                      <span className="text-slate-500 flex items-center gap-1.5 font-medium">
+                        <span className="material-symbols-outlined text-base text-amber-600">location_city</span>
+                        Província:
+                      </span>
+                      <strong className="text-slate-900 text-right">{province}</strong>
+                    </div>
+
+                    <div className="py-2.5 flex justify-between items-start gap-3">
+                      <span className="text-slate-500 flex items-center gap-1.5 font-medium shrink-0">
+                        <span className="material-symbols-outlined text-base text-amber-600">home_pin</span>
+                        Endereço de Entrega:
+                      </span>
+                      <strong className="text-slate-900 text-right text-xs leading-snug">
+                        {deliveryAddress}
+                      </strong>
+                    </div>
+                  </>
+                )}
+
+                {wantsPhysicalAlert && format === 'ebook' && (
                   <div className="py-2.5 flex justify-between items-center gap-3 bg-amber-50/70 -mx-4 px-4 rounded-b-xl">
                     <span className="text-amber-900 flex items-center gap-1.5 font-medium text-xs">
                       <span className="material-symbols-outlined text-base text-amber-700">notifications_active</span>
@@ -1373,8 +1701,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 a: 'Sim. A obra foi diagramada no formato duplo: PDF de Alta Resolução (ideal para computadores e tablets) e formato ePub adaptativo (para telemóveis Android, iPhones e leitores digitais Kindle/Kobo).'
               },
               {
-                q: 'Como funciona a reserva da edição física impressa?',
-                a: 'A reserva do livro físico é 100% gratuita neste período de pré-venda. A obra física está em fase de produção gráfica e revisão. Ao submeter o formulário de reserva gratuita, o seu nome entra na lista prioritária para receber o exemplar com autógrafo nominal do Eng. Denis Zombo. Você só efetuará o pagamento depois de o livro estar impresso e pronto para entrega!'
+                q: 'Como funciona a aquisição da edição física impressa?',
+                a: 'No Brasil e no exterior, o livro físico impresso já está disponível para compra imediata na Amazon Brasil (por R$ 47,40) e no Mercado Livre. Em Angola, a edição física será impressa localmente brevemente. Ao preencher o formulário acima e marcar a opção de alerta, ficará automaticamente registado(a) na lista prioritária para ser notificado(a) via WhatsApp assim que os exemplares chegarem em Angola!'
               },
               {
                 q: 'Quais são os bancos disponíveis para transferência?',
@@ -1561,10 +1889,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-md mx-auto flex items-center justify-between gap-3">
           <div className="flex flex-col min-w-0">
             <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
-              E-book Oficial
+              Edição Oficial
             </span>
-            <span className="font-mono text-base font-bold text-slate-900 leading-tight">
-              {BOOK_METADATA.prices.ebookFormatted}
+            <span className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">
+              Digital & Impresso
             </span>
           </div>
 
@@ -1573,7 +1901,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             className="flex-1 inline-flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-[0.98] text-white font-bold text-xs sm:text-sm transition-all shadow-md cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">shopping_cart</span>
-            <span>Comprar E-book</span>
+            <span>Comprar Livro</span>
             <span className="material-symbols-outlined text-[16px]">arrow_downward</span>
           </button>
         </div>

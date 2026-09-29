@@ -42,7 +42,7 @@ service cloud.firestore {
              data.fullName is string && data.fullName.size() <= 200 &&
              data.phone is string && data.phone.size() <= 64 &&
              data.format in ['ebook', 'fisico'] &&
-             data.status in ['novo', 'contactado', 'pago', 'concluido'];
+             data.status in ['novo', 'contactado', 'pago', 'concluido', 'cancelado'];
     }
 
     // Users Collection
