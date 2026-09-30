@@ -19,19 +19,23 @@ import {
   getDocs, 
   onSnapshot, 
   updateDoc, 
-  deleteDoc 
+  deleteDoc,
+  setLogLevel
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
+
+// Suppress transient connection warnings in restricted browser/preview environments
+setLogLevel('error');
 
 // Initialize Firebase App
 export const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore with specific database ID and robust connection pooling
-// (CRITICAL: Prevents [code=unavailable] WebChannel disconnects in browser environments)
+// Initialize Firestore with specific database ID and forced long polling
+// (CRITICAL: Prevents [code=unavailable] WebChannel disconnects and connection failures in browser environments)
 export const db = initializeFirestore(
   app,
   {
-    experimentalAutoDetectLongPolling: true,
+    experimentalForceLongPolling: true,
   },
   firebaseConfig.firestoreDatabaseId
 );
