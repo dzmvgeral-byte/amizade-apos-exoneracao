@@ -599,10 +599,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                             <span className="material-symbols-outlined text-2xl">shopping_cart</span>
                           </div>
                           <div className="min-w-0">
-                            <h4 className="text-base sm:text-lg font-bold text-white group-hover:text-amber-300 transition-colors leading-tight">
-                              Amazon
-                            </h4>
-                            <span className="text-[11px] text-slate-300 block mt-0.5">
+                            <span className="text-xs sm:text-sm font-semibold text-slate-200 block">
                               Livro Físico Impresso
                             </span>
                           </div>
@@ -640,10 +637,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                             <span className="material-symbols-outlined text-2xl">local_shipping</span>
                           </div>
                           <div className="min-w-0">
-                            <h4 className="text-base sm:text-lg font-bold text-white group-hover:text-amber-300 transition-colors leading-tight">
-                              Mercado Livre Brasil
-                            </h4>
-                            <span className="text-[11px] text-slate-300 block mt-0.5">
+                            <span className="text-xs sm:text-sm font-semibold text-slate-200 block">
                               Livro Físico Impresso
                             </span>
                           </div>

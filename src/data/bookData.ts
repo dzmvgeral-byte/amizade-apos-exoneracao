@@ -214,7 +214,7 @@ export const BOOK_METADATA = {
     coverFront: "https://i.postimg.cc/gkV50ysH/CAPA-LIVRO-AMIZADE.png",
     coverCard: "https://i.postimg.cc/gkV50ysH/CAPA-LIVRO-AMIZADE.png",
     secondaryCover: "https://i.postimg.cc/gkV50ysH/CAPA-LIVRO-AMIZADE.png",
-    authorPortrait: "https://i.postimg.cc/cCFj1F1Z/Foto-do-auto-Denis-Zombo.jpg",
+    authorPortrait: "https://i.postimg.cc/mZKpj1cS/5274f511-ce0c-47f3-bf8b-d550e24674ed.jpg",
     authorSignature: "https://lh3.googleusercontent.com/aida-public/AB6AXuDqoulHnu-w47DgbMPeqy2J4JJfgbk8jyfKtTHZmUAZQv03hcYt3KxeojVtDocp6oOdkAA3NLZ9Lih5fn2pAAjb2qb9rQWGF0b4e0BwRhbPE2emxoq85ewD9cWRLyCFGppVXyAn9pd_lIcOxARZcbAEpsLyHop9dxeJV-ZEfcpBs5fO9bGcpFjdWuhcyIPpmjrFrEV84rItSKpfXl4NwXa24_qkyX0yRkWqAFcrlOPSNX3N-4PK_xNo",
     brandLogo: "https://lh3.googleusercontent.com/aida/AEtjO1VfKAuOzzUPlGF7CPg_CjmYQl4_U8ik9aWB2mLZLCzi90aMLMk2lPO4RL9PoEIh3cJfM-SloGwlr9OlcQq5MCfhaQq4_Z_dvjLN-xwCeFNi1PLsf5CoTBUL4QsGHjolgBpvjyi_C2MLCWSY2UdqY4TyrnhomT7g-mnR59IdKC-kGvfT8FeCnbVcAAk8wQ4JJTbB839fzGyGGDZO9Je-reHR2CjgXgNY6aSHi_PCG6GGKkE47sXjpSA1Yw",
     thumbnail: "https://i.postimg.cc/gkV50ysH/CAPA-LIVRO-AMIZADE.png"
