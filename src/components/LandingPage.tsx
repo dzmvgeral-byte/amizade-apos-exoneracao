@@ -907,47 +907,39 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               ) : (
                 /* Checkbox: Desejo ser avisado quando o livro físico estiver pronto (apenas para quem compra e-book) */
                 <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/70 border border-amber-200/90 transition-all hover:bg-amber-50">
-                  <label className="flex items-start gap-3.5 cursor-pointer select-none">
+                  <label className="flex items-start sm:items-center gap-3.5 cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={wantsPhysicalAlert}
                       onChange={(e) => setWantsPhysicalAlert(e.target.checked)}
-                      className="w-5 h-5 rounded border-slate-300 text-amber-600 focus:ring-amber-500 mt-1 accent-amber-600 cursor-pointer shrink-0"
+                      className="w-5 h-5 rounded border-slate-300 text-amber-600 focus:ring-amber-500 accent-amber-600 cursor-pointer shrink-0"
                     />
                     <div className="flex flex-col text-xs text-slate-700 min-w-0">
                       <span className="font-bold text-slate-900 text-sm flex items-start sm:items-center gap-2 leading-snug">
                         <span className="material-symbols-outlined text-amber-700 text-[20px] shrink-0 mt-0.5 sm:mt-0">notifications_active</span>
                         <span>Desejo ser avisado(a) quando o Livro Físico Impresso estiver pronto</span>
                       </span>
-                      <p className="text-slate-600 mt-1 leading-relaxed">
-                        Será notificado(a) gratuitamente via WhatsApp assim que a edição impressa estiver disponível.
-                      </p>
                     </div>
                   </label>
                 </div>
               )}
 
               {/* Recap Bar */}
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              <div className="p-3 sm:p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2.5 sm:gap-4">
+                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                   <img
                     src={BOOK_METADATA.images.secondaryCover}
                     alt={format === 'fisico' ? "Livro Físico Impresso" : "E-book Digital"}
-                    className="w-10 h-14 object-cover rounded-lg shadow-2xs border border-slate-300 shrink-0"
+                    className="w-8 h-11 sm:w-10 sm:h-14 object-cover rounded-md sm:rounded-lg shadow-2xs border border-slate-300 shrink-0"
                   />
-                  <div>
-                    <span className="text-sm font-bold text-slate-900 block">
+                  <div className="min-w-0">
+                    <span className="text-xs sm:text-sm font-bold text-slate-900 block leading-tight line-clamp-2 sm:line-clamp-none">
                       {format === 'fisico' ? 'Amizade após Exoneração • Livro Físico' : 'Amizade após Exoneração • E-book Digital'}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      {format === 'fisico'
-                        ? `Edição Impressa com Orelhas • Entrega em ${province}`
-                        : `${BOOK_METADATA.author} ${wantsPhysicalAlert ? '• (+ Alerta Livro Físico Ativado)' : ''}`}
                     </span>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className="font-mono text-xl sm:text-2xl font-bold text-slate-900 block">
+                <div className="text-right shrink-0">
+                  <span className="font-mono text-base sm:text-xl font-bold text-slate-900 block whitespace-nowrap">
                     {format === 'fisico' ? '10.000 Kz' : BOOK_METADATA.prices.ebookFormatted}
                   </span>
                 </div>
