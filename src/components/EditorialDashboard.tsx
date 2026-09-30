@@ -888,46 +888,10 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span>Olá, {getUserFirstName()}</span>
               </div>
-
-              <button
-                onClick={onViewStore}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-colors cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-sm text-amber-700">storefront</span>
-                <span>Loja Landing</span>
-              </button>
-
-              <button
-                onClick={onOpenReader}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-bold transition-colors cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-sm text-amber-700">menu_book</span>
-                <span className="hidden sm:inline">Leitor Digital</span>
-              </button>
             </div>
           </header>
 
           <main className="p-4 sm:p-8 space-y-6 max-w-7xl w-full mx-auto">
-            {/* Operational Banner */}
-            <div className="w-full bg-[#E1E8FD] px-5 py-3 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-xs border border-blue-200">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-2.5 w-2.5 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
-                </span>
-                <span className="text-xs uppercase font-bold tracking-wider text-slate-900">
-                  Nó WhatsApp Oficial DZMV Conectado ({bankingConfig.mcxPhone})
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 text-xs">
-                <span className="font-semibold text-slate-700">Sessão Ativa:</span>
-                <span className="px-2.5 py-0.5 bg-white rounded-lg font-bold text-amber-950 border border-slate-200 font-mono">
-                  Olá, {getUserFirstName()} ({adminUser?.email || 'dzmv.geral@gmail.com'})
-                </span>
-              </div>
-            </div>
-
             {/* TAB 1: LEADS REGISTADOS (MAIN FOCUS) */}
             {activeTab === 'leads' && (
               <div className="space-y-6">
