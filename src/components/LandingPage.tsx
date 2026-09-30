@@ -222,114 +222,117 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <div className="w-full bg-[#FBFBFE] font-sans text-[#141B2B] antialiased">
-      {/* CONTINUOUS RUNNING TICKER / MARQUEE BAR */}
-      <aside aria-label="Avisos e Preços Disponíveis" className="w-full bg-[#0B0F19] text-white py-2.5 overflow-hidden border-b border-amber-500/20 relative z-30 select-none">
-        <div className="flex animate-marquee-rtl items-center">
-          {/* We repeat the ticker list twice for a seamless infinite scroll */}
-          {[0, 1].map((copyIndex) => (
-            <div key={copyIndex} className="flex items-center gap-6 sm:gap-10 shrink-0 pr-6 sm:pr-10 text-xs sm:text-[13px]">
-              {/* Item 1: Angola E-book */}
-              <a
-                href="#formatos"
-                onClick={(e) => {
-                  e.preventDefault();
-                  scrollToCheckoutAndFocus('ebook');
-                }}
-                className="inline-flex items-center gap-2 hover:text-amber-300 transition-colors group cursor-pointer"
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span className="font-bold text-amber-300">🇦🇴 Angola:</span>
-                <span className="text-slate-200">E-book Digital disponível por</span>
-                <span className="font-mono font-bold text-white bg-amber-600/40 px-2 py-0.5 rounded text-amber-300 border border-amber-500/30">
-                  5.000 Kz
-                </span>
-              </a>
+      {/* STICKY TOP CONTAINER: RUNNING TICKER + HEADER */}
+      <div className="sticky top-0 left-0 right-0 w-full z-40 shadow-xs">
+        {/* CONTINUOUS RUNNING TICKER / MARQUEE BAR */}
+        <aside aria-label="Avisos e Preços Disponíveis" className="w-full bg-[#0B0F19] text-white py-2 sm:py-2.5 overflow-hidden border-b border-amber-500/20 relative select-none">
+          <div className="flex animate-marquee-rtl items-center">
+            {/* We repeat the ticker list twice for a seamless infinite scroll */}
+            {[0, 1].map((copyIndex) => (
+              <div key={copyIndex} className="flex items-center gap-6 sm:gap-10 shrink-0 pr-6 sm:pr-10 text-xs sm:text-[13px]">
+                {/* Item 1: Angola E-book */}
+                <a
+                  href="#formatos"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    scrollToCheckoutAndFocus('ebook');
+                  }}
+                  className="inline-flex items-center gap-2 hover:text-amber-300 transition-colors group cursor-pointer"
+                >
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span className="font-bold text-amber-300">🇦🇴 Angola:</span>
+                  <span className="text-slate-200">E-book Digital disponível por</span>
+                  <span className="font-mono font-bold text-white bg-amber-600/40 px-2 py-0.5 rounded text-amber-300 border border-amber-500/30">
+                    5.000 Kz
+                  </span>
+                </a>
 
-              <span className="text-amber-500/40 font-bold">•</span>
+                <span className="text-amber-500/40 font-bold">•</span>
 
-              {/* Item 2: Angola Livro Físico */}
-              <a
-                href="#formatos"
-                onClick={(e) => {
-                  e.preventDefault();
-                  scrollToCheckoutAndFocus('fisico');
-                }}
-                className="inline-flex items-center gap-2 hover:text-amber-300 transition-colors group cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px] text-amber-400">menu_book</span>
-                <span className="font-bold text-amber-300">🇦🇴 Angola:</span>
-                <span className="text-slate-200">Livro Físico Impresso por</span>
-                <span className="font-mono font-bold text-white bg-white/10 px-2 py-0.5 rounded text-amber-200 border border-white/20">
-                  10.000 Kz
-                </span>
-              </a>
+                {/* Item 2: Angola Livro Físico */}
+                <a
+                  href="#formatos"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    scrollToCheckoutAndFocus('fisico');
+                  }}
+                  className="inline-flex items-center gap-2 hover:text-amber-300 transition-colors group cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-amber-400">menu_book</span>
+                  <span className="font-bold text-amber-300">🇦🇴 Angola:</span>
+                  <span className="text-slate-200">Livro Físico Impresso por</span>
+                  <span className="font-mono font-bold text-white bg-white/10 px-2 py-0.5 rounded text-amber-200 border border-white/20">
+                    10.000 Kz
+                  </span>
+                </a>
 
-              <span className="text-amber-500/40 font-bold">•</span>
+                <span className="text-amber-500/40 font-bold">•</span>
 
-              {/* Item 3: Brasil e Exterior Livro Físico */}
-              <a
-                href="#formatos"
-                onClick={(e) => {
-                  e.preventDefault();
-                  const target = document.getElementById('formatos');
-                  if (target) target.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="inline-flex items-center gap-2 hover:text-amber-300 transition-colors group cursor-pointer"
-              >
-                <span className="text-base">🇧🇷 🌍</span>
-                <span className="font-bold text-amber-300">Brasil & Exterior:</span>
-                <span className="text-slate-200">Livro Físico Impresso disponível por</span>
-                <span className="font-mono font-bold text-white bg-emerald-500/20 px-2 py-0.5 rounded text-emerald-300 border border-emerald-500/40">
-                  R$ 47,40
-                </span>
-                <span className="text-[11px] text-slate-300 font-medium">na <strong>Amazon</strong> e <strong>Mercado Livre Brasil</strong></span>
-              </a>
+                {/* Item 3: Brasil e Exterior Livro Físico */}
+                <a
+                  href="#formatos"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const target = document.getElementById('formatos');
+                    if (target) target.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="inline-flex items-center gap-2 hover:text-amber-300 transition-colors group cursor-pointer"
+                >
+                  <span className="text-base">🇧🇷 🌍</span>
+                  <span className="font-bold text-amber-300">Brasil & Exterior:</span>
+                  <span className="text-slate-200">Livro Físico Impresso disponível por</span>
+                  <span className="font-mono font-bold text-white bg-emerald-500/20 px-2 py-0.5 rounded text-emerald-300 border border-emerald-500/40">
+                    R$ 47,40
+                  </span>
+                  <span className="text-[11px] text-slate-300 font-medium">na <strong>Amazon</strong> e <strong>Mercado Livre Brasil</strong></span>
+                </a>
 
-              <span className="text-amber-500/40 font-bold">•</span>
+                <span className="text-amber-500/40 font-bold">•</span>
 
-              {/* Item 4: Lançamento Oficial */}
-              <div className="inline-flex items-center gap-2 text-slate-300">
-                <span className="material-symbols-outlined text-[16px] text-amber-400">verified</span>
-                <span className="font-bold text-white">Lançamento Oficial DZMV 2026</span>
-                <span className="text-white/30">|</span>
-                <span className="text-amber-200 font-medium">Eng. Dénis Zombo</span>
-                <span className="text-white/30">•</span>
-                <span className="text-slate-400 text-[11px]">Editora Sábhia (Brasil)</span>
+                {/* Item 4: Lançamento Oficial */}
+                <div className="inline-flex items-center gap-2 text-slate-300">
+                  <span className="material-symbols-outlined text-[16px] text-amber-400">verified</span>
+                  <span className="font-bold text-white">Lançamento Oficial DZMV 2026</span>
+                  <span className="text-white/30">|</span>
+                  <span className="text-amber-200 font-medium">Eng. Dénis Zombo</span>
+                  <span className="text-white/30">•</span>
+                  <span className="text-slate-400 text-[11px]">Editora Sábhia (Brasil)</span>
+                </div>
+
+                <span className="text-amber-500/40 font-bold">•</span>
               </div>
+            ))}
+          </div>
+        </aside>
 
-              <span className="text-amber-500/40 font-bold">•</span>
-            </div>
-          ))}
-        </div>
-      </aside>
+        {/* HEADER BAR */}
+        <header className="w-full bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
+          <div className="h-16 sm:h-20 max-w-7xl mx-auto px-3 sm:px-6 lg:px-12 flex items-center justify-between gap-2 sm:gap-6">
+            {/* Brand Crest: DZMV as Top Brand + Editora Sábhia badge */}
+            <a href="#" className="flex items-center gap-2 sm:gap-3.5 group shrink-0">
+              <div className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-[#0B0F19] text-amber-400 flex items-center justify-center font-serif-editorial text-base sm:text-xl font-bold tracking-wider shadow-xs group-hover:bg-amber-700 group-hover:text-white transition-colors">
+                DZMV
+              </div>
+              <div className="flex flex-col justify-center">
+                <span className="text-[11px] sm:text-xs font-bold text-slate-900 tracking-tight sm:tracking-wide">
+                  Lançamento Oficial
+                </span>
+                <span className="text-[10px] sm:text-[11px] font-semibold text-amber-800 tracking-tight sm:tracking-wide">
+                  Edição: Editora Sábhia
+                </span>
+              </div>
+            </a>
 
-      {/* HEADER BAR */}
-      <header className="sticky top-0 left-0 right-0 w-full z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
-        <div className="h-16 sm:h-20 max-w-7xl mx-auto px-3 sm:px-6 lg:px-12 flex items-center justify-between gap-2 sm:gap-6">
-          {/* Brand Crest: DZMV as Top Brand + Editora Sábhia badge */}
-          <a href="#" className="flex items-center gap-2 sm:gap-3.5 group shrink-0">
-            <div className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-[#0B0F19] text-amber-400 flex items-center justify-center font-serif-editorial text-base sm:text-xl font-bold tracking-wider shadow-xs group-hover:bg-amber-700 group-hover:text-white transition-colors">
-              DZMV
-            </div>
-            <div className="flex flex-col justify-center">
-              <span className="text-[11px] sm:text-xs font-bold text-slate-900 tracking-tight sm:tracking-wide">
-                Lançamento Oficial
-              </span>
-              <span className="text-[10px] sm:text-[11px] font-semibold text-amber-800 tracking-tight sm:tracking-wide">
-                Edição: Editora Sábhia
-              </span>
-            </div>
-          </a>
-
-          {/* Desktop Nav Links */}
-          <nav className="hidden md:flex items-center gap-5 lg:gap-8 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-            <a href="#a-obra" className="hover:text-amber-800 transition-colors">A Obra</a>
-            <a href="#formatos" className="hover:text-amber-800 transition-colors">Formatos & Preços</a>
-            <a href="#sobre-o-autor" className="hover:text-amber-800 transition-colors">O Autor</a>
-            <a href="#faq" className="hover:text-amber-800 transition-colors">Dúvidas</a>
-          </nav>
-        </div>
-      </header>
+            {/* Desktop Nav Links */}
+            <nav className="hidden md:flex items-center gap-5 lg:gap-8 text-xs font-semibold uppercase tracking-wider text-slate-600 whitespace-nowrap">
+              <a href="#a-obra" className="hover:text-amber-800 transition-colors">A Obra</a>
+              <a href="#formatos" className="hover:text-amber-800 transition-colors">Formatos & Preços</a>
+              <a href="#sobre-o-autor" className="hover:text-amber-800 transition-colors">O Autor</a>
+              <a href="#faq" className="hover:text-amber-800 transition-colors">Dúvidas</a>
+            </nav>
+          </div>
+        </header>
+      </div>
 
       {/* HERO SECTION */}
       <section className="relative w-full overflow-hidden bg-gradient-to-b from-[#FBFBFE] via-[#F4F6FC] to-[#FBFBFE] py-16 lg:py-24" id="a-obra">
