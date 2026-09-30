@@ -79,7 +79,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // FAQ state
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
-  // Smooth scroll to form and focus name input with blinking cursor
+  // Smooth scroll directly to name input and focus with blinking cursor
   const scrollToCheckoutAndFocus = (
     options?: 'ebook' | 'fisico' | { requestPhysicalAlert?: boolean }
   ) => {
@@ -91,9 +91,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     if (typeof options === 'object' && options?.requestPhysicalAlert) {
       setWantsPhysicalAlert(true);
     }
-    const checkoutEl = document.getElementById('comprar-agora');
-    if (checkoutEl) {
-      checkoutEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    const nameEl = document.getElementById('campo-nome') || nameInputRef.current || document.getElementById('order-name');
+    if (nameEl) {
+      nameEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      const checkoutEl = document.getElementById('comprar-agora');
+      if (checkoutEl) {
+        checkoutEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
 
     setTimeout(() => {
@@ -779,7 +785,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
 
               {/* Name */}
-              <div className="space-y-1.5">
+              <div id="campo-nome" className="space-y-1.5 scroll-mt-24 sm:scroll-mt-28">
                 <label className="text-sm font-semibold text-slate-800" htmlFor="order-name">
                   Seu Nome Completo *
                 </label>
