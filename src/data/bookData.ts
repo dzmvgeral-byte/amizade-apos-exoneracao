@@ -100,22 +100,39 @@ const GALLERY_STORAGE_KEY = 'dzmv_author_gallery_v4';
 
 export function getStoredGallery(): GalleryImage[] {
   try {
-    // Clean old legacy storage keys if present
-    ['dzmv_author_gallery_v1', 'dzmv_author_gallery_v2', 'dzmv_author_gallery_v3'].forEach(k => {
-      try { localStorage.removeItem(k); } catch {}
-    });
+    const candidateKeys = [
+      GALLERY_STORAGE_KEY,
+      'dzmv_author_gallery_v3',
+      'dzmv_author_gallery_v2',
+      'dzmv_author_gallery_v1',
+      'dzmv_author_gallery',
+      'dzmv_gallery'
+    ];
 
-    const raw = localStorage.getItem(GALLERY_STORAGE_KEY);
-    if (!raw) {
+    let foundList: GalleryImage[] | null = null;
+    for (const key of candidateKeys) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            foundList = parsed;
+            break;
+          }
+        }
+      } catch {}
+    }
+
+    if (!foundList || foundList.length === 0) {
       localStorage.setItem(GALLERY_STORAGE_KEY, JSON.stringify(DEFAULT_GALLERY));
       return DEFAULT_GALLERY;
     }
-    const parsed = JSON.parse(raw);
-    const list = Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_GALLERY;
-    const sanitized = list.map((img: GalleryImage) => ({
+
+    const sanitized = foundList.map((img: GalleryImage) => ({
       ...img,
       title: (img.title || '').replace(/Ângelo/gi, 'Zombo').replace(/Angelo/gi, 'Zombo')
     }));
+
     localStorage.setItem(GALLERY_STORAGE_KEY, JSON.stringify(sanitized));
     return sanitized;
   } catch {

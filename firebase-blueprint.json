@@ -43,6 +43,28 @@
         "createdAt": { "type": "string" }
       },
       "required": ["id", "fullName", "phone", "format", "status"]
+    },
+    "GallerySettings": {
+      "title": "GallerySettings",
+      "description": "Public gallery configuration and photos list",
+      "type": "object",
+      "properties": {
+        "images": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "url": { "type": "string" },
+              "title": { "type": "string" },
+              "addedAt": { "type": "string" }
+            },
+            "required": ["id", "url", "title"]
+          }
+        },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["images"]
     }
   },
   "firestore": {
@@ -57,6 +79,10 @@
     "/leads/{leadId}": {
       "schema": "Lead",
       "description": "Customer leads and book orders"
+    },
+    "/settings/gallery": {
+      "schema": "GallerySettings",
+      "description": "Public gallery configuration and photos list"
     }
   }
 }

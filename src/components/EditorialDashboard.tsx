@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { BOOK_METADATA, BankingConfig, getStoredBankingConfig, saveStoredBankingConfig, GalleryImage, getStoredGallery, saveStoredGallery, resetDefaultGallery } from '../data/bookData';
+import React, { useState, useEffect } from 'react';
+import { BOOK_METADATA, BankingConfig, getStoredBankingConfig, saveStoredBankingConfig, GalleryImage, getStoredGallery, resetDefaultGallery } from '../data/bookData';
+import { saveGalleryToFirestore, loadGalleryFromFirestore, subscribeToGallery } from '../services/firebaseGallery';
 import { Lead, AdminUser, buildAdminToLeadWhatsAppLink, getRegisteredAdmins, registerNewAdmin, deleteRegisteredAdmin, updateAdminPassword, updateAdminNameAndRole } from '../data/leadsData';
 import { changeFirebasePassword } from '../firebase';
 import { BroadcastModal } from './BroadcastModal';
@@ -57,6 +58,23 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
   const [newImageUrl, setNewImageUrl] = useState('');
   const [newImageTitle, setNewImageTitle] = useState('');
   const [galleryFormError, setGalleryFormError] = useState<string | null>(null);
+
+  // Sync gallery with Firestore cloud database in real-time
+  useEffect(() => {
+    loadGalleryFromFirestore().then((imgs) => {
+      if (imgs && imgs.length > 0) {
+        setGalleryList(imgs);
+      }
+    });
+
+    const unsub = subscribeToGallery((imgs) => {
+      if (imgs && imgs.length > 0) {
+        setGalleryList(imgs);
+      }
+    });
+
+    return () => unsub();
+  }, []);
 
   // Team & User management state
   const [adminsList, setAdminsList] = useState(getRegisteredAdmins);
@@ -322,16 +340,16 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
     const newItem: GalleryImage = {
       id: Date.now(),
       url: trimmedUrl,
-      title: newImageTitle.trim() || `Eng. Dénis Ângelo Vasco • Foto ${galleryList.length + 1}`,
+      title: newImageTitle.trim() || `Eng. Dénis Zombo Vasco • Foto ${galleryList.length + 1}`,
       addedAt: new Date().toLocaleDateString('pt-PT')
     };
 
     const updated = [newItem, ...galleryList];
     setGalleryList(updated);
-    saveStoredGallery(updated);
+    saveGalleryToFirestore(updated);
     setNewImageUrl('');
     setNewImageTitle('');
-    showToast('Nova foto anexada à galeria com sucesso! O carrossel da landing page já foi atualizado.');
+    showToast('Nova foto anexada à galeria com sucesso! O carrossel da landing page já foi atualizado na nuvem.');
   };
 
   const handleDeleteGalleryImage = (id: string | number) => {
@@ -341,7 +359,7 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
     }
     const updated = galleryList.filter((item) => item.id !== id);
     setGalleryList(updated);
-    saveStoredGallery(updated);
+    saveGalleryToFirestore(updated);
     showToast('Fotografia removida da galeria.');
   };
 
@@ -353,7 +371,7 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
     copy[index] = copy[targetIdx];
     copy[targetIdx] = temp;
     setGalleryList(copy);
-    saveStoredGallery(copy);
+    saveGalleryToFirestore(copy);
   };
 
   const handleResetGalleryToDefault = () => {
@@ -361,6 +379,7 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
     if (!confirmed) return;
     const def = resetDefaultGallery();
     setGalleryList(def);
+    saveGalleryToFirestore(def);
     showToast('Galeria de fotos restaurada para o padrão oficial.');
   };
 

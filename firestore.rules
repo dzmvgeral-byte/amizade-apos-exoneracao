@@ -68,6 +68,17 @@ service cloud.firestore {
       allow delete: if isSignedIn();
     }
 
+    // Public Gallery Settings and Images (Public read, authenticated write)
+    match /settings/gallery {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    match /gallery/{galleryId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
     // Connection Health Check
     match /test/connection {
       allow read: if true;

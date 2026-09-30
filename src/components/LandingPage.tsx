@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BOOK_METADATA, getStoredBankingConfig, getStoredGallery, GalleryImage } from '../data/bookData';
 import { Lead, buildWhatsAppLink } from '../data/leadsData';
+import { loadGalleryFromFirestore, subscribeToGallery } from '../services/firebaseGallery';
 
 interface LandingPageProps {
   onGoToLogin: () => void;
@@ -40,8 +41,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>(() => getStoredGallery());
 
   useEffect(() => {
+    // 1. Initial sync with Firestore cloud database
+    loadGalleryFromFirestore().then((imgs) => {
+      if (imgs && imgs.length > 0) {
+        setGalleryImages(imgs);
+      }
+    });
+
+    // 2. Real-time subscription to cloud gallery changes
+    const unsub = subscribeToGallery((imgs) => {
+      if (imgs && imgs.length > 0) {
+        setGalleryImages(imgs);
+      }
+    });
+
+    // 3. Fallback for cross-tab local updates
     const handleGalleryUpdate = (e: any) => {
-      if (e.detail) {
+      if (e.detail && Array.isArray(e.detail) && e.detail.length > 0) {
         setGalleryImages(e.detail);
       } else {
         setGalleryImages(getStoredGallery());
@@ -49,7 +65,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     };
     window.addEventListener('dzmv_gallery_updated', handleGalleryUpdate);
     window.addEventListener('storage', handleGalleryUpdate);
+
     return () => {
+      unsub();
       window.removeEventListener('dzmv_gallery_updated', handleGalleryUpdate);
       window.removeEventListener('storage', handleGalleryUpdate);
     };
@@ -594,15 +612,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       className="block p-4 sm:p-5 rounded-2xl bg-white/10 hover:bg-white/[0.15] border border-amber-400/30 hover:border-amber-400 transition-all shadow-md group cursor-pointer"
                     >
                       <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/10">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                            <span className="material-symbols-outlined text-2xl">shopping_cart</span>
-                          </div>
-                          <div className="min-w-0">
-                            <span className="text-xs sm:text-sm font-semibold text-slate-200 block">
-                              Livro Físico Impresso
-                            </span>
-                          </div>
+                        <div className="min-w-0">
+                          <span className="text-xs sm:text-sm font-semibold text-slate-200 block">
+                            Livro Impresso
+                          </span>
                         </div>
 
                         <div className="text-right shrink-0">
@@ -632,15 +645,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       className="block p-4 sm:p-5 rounded-2xl bg-white/10 hover:bg-white/[0.15] border border-amber-400/30 hover:border-amber-400 transition-all shadow-md group cursor-pointer"
                     >
                       <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/10">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                            <span className="material-symbols-outlined text-2xl">local_shipping</span>
-                          </div>
-                          <div className="min-w-0">
-                            <span className="text-xs sm:text-sm font-semibold text-slate-200 block">
-                              Livro Físico Impresso
-                            </span>
-                          </div>
+                        <div className="min-w-0">
+                          <span className="text-xs sm:text-sm font-semibold text-slate-200 block">
+                            Livro Impresso
+                          </span>
                         </div>
 
                         <div className="text-right shrink-0">
@@ -1594,41 +1602,46 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="absolute left-0 top-0 bottom-0 w-12 sm:w-24 bg-gradient-to-r from-[#070A12] to-transparent z-10 pointer-events-none"></div>
           <div className="absolute right-0 top-0 bottom-0 w-12 sm:w-24 bg-gradient-to-l from-[#070A12] to-transparent z-10 pointer-events-none"></div>
 
-          {/* Marquee Track (Repeated twice for continuous infinite flow) */}
+          {/* Marquee Track (Seamless continuous infinite flow) */}
           <div className="animate-marquee-rtl flex items-center gap-4 sm:gap-6 py-2">
-            {[...galleryImages, ...galleryImages].map((img, index) => (
-              <div
-                key={`${img.id}-${index}`}
-                onClick={() => setSelectedGalleryImage(img)}
-                className="relative w-40 sm:w-52 aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 border border-white/15 shadow-lg group/item cursor-pointer shrink-0 transition-transform duration-300 hover:scale-105 hover:border-amber-400 hover:shadow-amber-500/10 hover:shadow-2xl"
-              >
-                <img
-                  src={img.url}
-                  alt={img.title}
-                  loading="lazy"
-                  className="w-full h-full object-cover object-center transform transition duration-500 group-hover/item:scale-110"
-                />
-                
-                {/* Subtle dark gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-75 group-hover/item:opacity-90 transition-opacity"></div>
+            {(() => {
+              const list = galleryImages.length > 0 ? galleryImages : [];
+              const repetitions = list.length < 5 ? 4 : list.length < 10 ? 3 : 2;
+              const displayList = Array(repetitions).fill(list).flat();
+              return displayList.map((img, index) => (
+                <div
+                  key={`${img.id}-${index}`}
+                  onClick={() => setSelectedGalleryImage(img)}
+                  className="relative w-40 sm:w-52 aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 border border-white/15 shadow-lg group/item cursor-pointer shrink-0 transition-transform duration-300 hover:scale-105 hover:border-amber-400 hover:shadow-amber-500/10 hover:shadow-2xl"
+                >
+                  <img
+                    src={img.url}
+                    alt={img.title}
+                    loading="lazy"
+                    className="w-full h-full object-cover object-center transform transition duration-500 group-hover/item:scale-110"
+                  />
+                  
+                  {/* Subtle dark gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-75 group-hover/item:opacity-90 transition-opacity"></div>
 
-                {/* Overlay Caption & Zoom Icon */}
-                <div className="absolute bottom-0 left-0 right-0 p-3 flex flex-col justify-end text-white">
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-amber-300 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[13px]">person</span>
-                    Dénis Zombo
-                  </span>
-                  <span className="text-xs font-semibold text-white/95 truncate leading-snug mt-0.5">
-                    {img.title.replace(/Ângelo/gi, 'Zombo').replace(/Angelo/gi, 'Zombo')}
-                  </span>
-                </div>
+                  {/* Overlay Caption & Zoom Icon */}
+                  <div className="absolute bottom-0 left-0 right-0 p-3 flex flex-col justify-end text-white">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-amber-300 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[13px]">person</span>
+                      Dénis Zombo
+                    </span>
+                    <span className="text-xs font-semibold text-white/95 truncate leading-snug mt-0.5">
+                      {img.title.replace(/Ângelo/gi, 'Zombo').replace(/Angelo/gi, 'Zombo')}
+                    </span>
+                  </div>
 
-                {/* Hover zoom indicator icon */}
-                <div className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-black/60 backdrop-blur-xs text-white/90 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-opacity">
-                  <span className="material-symbols-outlined text-sm">zoom_in</span>
+                  {/* Hover zoom indicator icon */}
+                  <div className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-black/60 backdrop-blur-xs text-white/90 flex items-center justify-center opacity-0 group-hover/item:opacity-100 transition-opacity">
+                    <span className="material-symbols-outlined text-sm">zoom_in</span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ));
+            })()}
           </div>
         </div>
       </section>
