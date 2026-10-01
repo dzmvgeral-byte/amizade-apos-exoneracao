@@ -1228,25 +1228,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
 
                 {paymentMethod === 'express' ? (
-                  <div className="space-y-2 bg-white p-3.5 rounded-xl border border-slate-200">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div>
-                        <span className="text-[10px] text-slate-500 uppercase font-bold block">Telemóvel Multicaixa Express DZMV:</span>
-                        <strong className="font-mono text-sm sm:text-base text-slate-900">{bankingConfig.mcxPhone}</strong>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => copyCoordinateText(bankingConfig.mcxPhone, 'Número Express')}
-                        className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg font-bold text-xs flex items-center justify-center gap-1 cursor-pointer transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-sm">content_copy</span>
-                        <span>Copiar Número</span>
-                      </button>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white p-3.5 rounded-xl border border-slate-200">
+                    <div>
+                      <span className="text-[10px] text-slate-500 uppercase font-bold block">Telemóvel Multicaixa Express DZMV:</span>
+                      <strong className="font-mono text-sm sm:text-base text-slate-900">{bankingConfig.mcxPhone}</strong>
                     </div>
-                    <div className="flex flex-wrap justify-between text-[11px] text-slate-600 pt-1.5 border-t border-slate-100">
-                      <span>Titular / Beneficiário: <strong>{bankingConfig.beneficiary}</strong></span>
-                      <span>Canal: <strong>Multicaixa Express</strong></span>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => copyCoordinateText(bankingConfig.mcxPhone, 'Número Express')}
+                      className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg font-bold text-xs flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-sm">content_copy</span>
+                      <span>Copiar Número</span>
+                    </button>
                   </div>
                 ) : paymentMethod === 'iban' ? (
                   <div className="space-y-2 bg-white p-3.5 rounded-xl border border-slate-200">
