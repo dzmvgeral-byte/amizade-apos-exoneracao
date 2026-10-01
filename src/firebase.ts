@@ -30,12 +30,13 @@ setLogLevel('error');
 // Initialize Firebase App
 export const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore with specific database ID and forced long polling
-// (CRITICAL: Prevents [code=unavailable] WebChannel disconnects and connection failures in browser environments)
+// Initialize Firestore with specific database ID, forced long polling, and undefined properties safety
+// (CRITICAL: Prevents [code=unavailable] WebChannel disconnects and unsupported undefined field value errors)
 export const db = initializeFirestore(
   app,
   {
     experimentalForceLongPolling: true,
+    ignoreUndefinedProperties: true,
   },
   firebaseConfig.firestoreDatabaseId
 );
@@ -141,6 +142,23 @@ export async function changeFirebasePassword(newPass: string) {
     return await updatePassword(auth.currentUser, newPass);
   }
   throw new Error('Nenhum utilizador autenticado no Firebase.');
+}
+
+/**
+ * Ensures there is an active Firebase Auth session with admin privileges.
+ * If user is not signed in via Google, uses the provisioned admin account.
+ */
+export async function ensureAdminFirebaseAuth() {
+  if (auth.currentUser) {
+    return auth.currentUser;
+  }
+  try {
+    const cred = await signInWithEmailAndPassword(auth, 'admin@sabhia.ao', 'admin123');
+    return cred.user;
+  } catch (err) {
+    console.warn('Could not authenticate system admin in Firebase:', err);
+    return null;
+  }
 }
 
 export { onAuthStateChanged };

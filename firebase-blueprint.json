@@ -65,6 +65,24 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["images"]
+    },
+    "BankingSettings": {
+      "title": "BankingSettings",
+      "description": "Public banking and payment coordinates",
+      "type": "object",
+      "properties": {
+        "bank": { "type": "string" },
+        "iban": { "type": "string" },
+        "mcxPhone": { "type": "string" },
+        "beneficiary": { "type": "string" },
+        "kwikAccountName": { "type": "string" },
+        "kwikNibOrPhone": { "type": "string" },
+        "kwikBank": { "type": "string" },
+        "instructions": { "type": "string" },
+        "redirectWhatsAppPhone": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["bank", "iban", "mcxPhone", "beneficiary"]
     }
   },
   "firestore": {
@@ -83,6 +101,10 @@
     "/settings/gallery": {
       "schema": "GallerySettings",
       "description": "Public gallery configuration and photos list"
+    },
+    "/settings/banking": {
+      "schema": "BankingSettings",
+      "description": "Public banking and payment coordinates"
     }
   }
 }

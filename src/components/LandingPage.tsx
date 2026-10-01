@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { BOOK_METADATA, getStoredBankingConfig, getStoredGallery, GalleryImage } from '../data/bookData';
+import { BOOK_METADATA, BankingConfig, getStoredBankingConfig, getStoredGallery, GalleryImage } from '../data/bookData';
 import { Lead, buildWhatsAppLink } from '../data/leadsData';
 import { loadGalleryFromFirestore, subscribeToGallery } from '../services/firebaseGallery';
+import { loadBankingFromFirestore, subscribeToBanking } from '../services/firebaseBanking';
 
 interface LandingPageProps {
   onGoToLogin: () => void;
@@ -73,8 +74,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     };
   }, []);
 
-  // Dynamic banking config
-  const bankingConfig = getStoredBankingConfig();
+  // Dynamic banking config synchronized in real-time with Cloud Firestore
+  const [bankingConfig, setBankingConfig] = useState<BankingConfig>(getStoredBankingConfig);
+
+  useEffect(() => {
+    loadBankingFromFirestore().then((cfg) => {
+      if (cfg) setBankingConfig(cfg);
+    });
+
+    const unsub = subscribeToBanking((cfg) => {
+      if (cfg) setBankingConfig(cfg);
+    });
+
+    return () => unsub();
+  }, []);
 
   // FAQ state
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -183,7 +196,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
     const fullAddress = isPhysical
       ? deliveryAddress.trim()
-      : undefined;
+      : '';
 
     const cleanPhone = whatsapp.startsWith('+244') ? whatsapp : `+244 ${whatsapp.trim()}`;
     const paymentMethodLabel = paymentMethod === 'express' 
@@ -201,7 +214,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       format, 
       wantsPhysicalAlert, 
       paymentMethodLabel,
-      undefined,
+      bankingConfig.redirectWhatsAppPhone || bankingConfig.mcxPhone,
       fullAddress
     );
     setSubmittedWhatsAppUrl(whatsappUrl);
@@ -1215,22 +1228,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
 
                 {paymentMethod === 'express' ? (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white p-3 rounded-xl border border-slate-200">
-                    <div>
-                      <span className="text-[10px] text-slate-500 uppercase font-bold block">Telemóvel Multicaixa Express:</span>
-                      <strong className="font-mono text-sm sm:text-base text-slate-900">{bankingConfig.mcxPhone}</strong>
+                  <div className="space-y-2 bg-white p-3.5 rounded-xl border border-slate-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <span className="text-[10px] text-slate-500 uppercase font-bold block">Telemóvel Multicaixa Express DZMV:</span>
+                        <strong className="font-mono text-sm sm:text-base text-slate-900">{bankingConfig.mcxPhone}</strong>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyCoordinateText(bankingConfig.mcxPhone, 'Número Express')}
+                        className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg font-bold text-xs flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-sm">content_copy</span>
+                        <span>Copiar Número</span>
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => copyCoordinateText(bankingConfig.mcxPhone, 'Número Express')}
-                      className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg font-bold text-xs flex items-center justify-center gap-1 cursor-pointer transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-sm">content_copy</span>
-                      <span>Copiar Número</span>
-                    </button>
+                    <div className="flex flex-wrap justify-between text-[11px] text-slate-600 pt-1.5 border-t border-slate-100">
+                      <span>Titular / Beneficiário: <strong>{bankingConfig.beneficiary}</strong></span>
+                      <span>Canal: <strong>Multicaixa Express</strong></span>
+                    </div>
                   </div>
                 ) : paymentMethod === 'iban' ? (
-                  <div className="space-y-2 bg-white p-3 rounded-xl border border-slate-200">
+                  <div className="space-y-2 bg-white p-3.5 rounded-xl border border-slate-200">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
                         <span className="text-[10px] text-slate-500 uppercase font-bold block">IBAN Oficial DZMV:</span>
@@ -1245,13 +1264,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         <span>Copiar IBAN</span>
                       </button>
                     </div>
-                    <div className="flex flex-wrap justify-between text-[11px] text-slate-600 pt-1 border-t border-slate-100">
-                      <span>Banco: <strong>{bankingConfig.bank}</strong></span>
-                      <span>Beneficiário: <strong>{bankingConfig.beneficiary}</strong></span>
+                    <div className="flex flex-wrap justify-between text-[11px] text-slate-600 pt-1.5 border-t border-slate-100">
+                      <span>Instituição Bancária: <strong>{bankingConfig.bank}</strong></span>
+                      <span>Titular / Beneficiário: <strong>{bankingConfig.beneficiary}</strong></span>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-2 bg-white p-3 rounded-xl border border-slate-200">
+                  <div className="space-y-2 bg-white p-3.5 rounded-xl border border-slate-200">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
                         <span className="text-[10px] text-slate-500 uppercase font-bold block">NIB / Telemóvel KWIK:</span>
@@ -1266,23 +1285,34 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                         <span>Copiar KWIK</span>
                       </button>
                     </div>
-                    <div className="flex flex-wrap justify-between text-[11px] text-slate-600 pt-1 border-t border-slate-100">
-                      <span>Nome: <strong>{bankingConfig.kwikAccountName}</strong></span>
+                    <div className="flex flex-wrap justify-between text-[11px] text-slate-600 pt-1.5 border-t border-slate-100">
+                      <span>Nome da Conta: <strong>{bankingConfig.kwikAccountName}</strong></span>
                       <span>Rede: <strong>{bankingConfig.kwikBank}</strong></span>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Prominent Observation Box */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-amber-50 border-2 border-amber-300/80 shadow-xs space-y-1.5">
+              {/* Prominent Instructions & Observation Box */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-amber-50 border-2 border-amber-300/80 shadow-xs space-y-2">
                 <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
-                  <span className="material-symbols-outlined text-amber-700 text-xl">warning</span>
-                  <span>Observação Importante:</span>
+                  <span className="material-symbols-outlined text-amber-700 text-xl">info</span>
+                  <span>Instruções de Pagamento & Envio do Comprovativo:</span>
                 </div>
-                <p className="text-xs sm:text-sm text-amber-950 font-medium leading-relaxed">
-                  Após efetuar o pagamento, por favor <strong>anexe o comprovativo</strong> na conversa do WhatsApp para que a equipa oficial DZMV possa validar e aprovar o envio imediato do seu <strong>E-book (PDF HD + ePub)</strong>.
+                <p className="text-xs sm:text-sm text-amber-950 font-medium leading-relaxed whitespace-pre-line">
+                  {bankingConfig.instructions || 'Efetue o pagamento via Multicaixa Express, Transferência IBAN ou Transferência KWIK e anexe o comprovativo no WhatsApp para validação e liberação do seu pedido.'}
                 </p>
+                {bankingConfig.redirectWhatsAppPhone && (
+                  <div className="pt-2 border-t border-amber-200/80 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-950 font-semibold">
+                    <span className="flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[16px] text-emerald-600">chat</span>
+                      Número WhatsApp para Envio do Comprovativo:
+                    </span>
+                    <strong className="font-mono text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded font-bold">
+                      {bankingConfig.redirectWhatsAppPhone}
+                    </strong>
+                  </div>
+                )}
               </div>
 
               {/* Big Finalize on WhatsApp Button */}
@@ -1292,14 +1322,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   email,
                   whatsapp.startsWith('+244') ? whatsapp : `+244 ${whatsapp.trim()}`,
                   province,
-                  'ebook',
+                  format,
                   wantsPhysicalAlert,
                   paymentMethod === 'express' 
                     ? 'Multicaixa Express' 
                     : paymentMethod === 'iban' 
                     ? 'Transferência IBAN' 
                     : 'Transferência KWIK',
-                  bankingConfig.redirectWhatsAppPhone || bankingConfig.mcxPhone
+                  bankingConfig.redirectWhatsAppPhone || bankingConfig.mcxPhone,
+                  deliveryAddress
                 )}
                 target="_blank"
                 rel="noopener noreferrer"

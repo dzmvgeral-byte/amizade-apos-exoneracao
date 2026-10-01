@@ -8,6 +8,7 @@ import { auth, onAuthStateChanged, logoutUser } from './firebase';
 import { 
   saveLeadToFirestore, 
   subscribeToFirestoreLeads, 
+  loadAllLeadsFromFirestore,
   updateLeadInFirestore, 
   deleteLeadFromFirestore,
   clearAllLeadsFromFirestore
@@ -30,9 +31,23 @@ export default function App() {
       setAdminUser(loadedAdmin);
     }
 
-    let unsubscribeLeads: (() => void) | null = null;
+    // 1. Initial direct load from Cloud Firestore to sync any leads created on other devices
+    loadAllLeadsFromFirestore().then((remoteLeads) => {
+      if (remoteLeads && remoteLeads.length > 0) {
+        setLeads(remoteLeads);
+        saveStoredLeads(remoteLeads);
+      }
+    });
 
-    // Subscribe to Firebase Auth state
+    // 2. Real-time subscription to Cloud Firestore
+    const unsubscribeLeads = subscribeToFirestoreLeads((remoteLeads) => {
+      if (remoteLeads && remoteLeads.length > 0) {
+        setLeads(remoteLeads);
+        saveStoredLeads(remoteLeads);
+      }
+    });
+
+    // 3. Subscribe to Firebase Auth state
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         const initials = firebaseUser.displayName
@@ -49,21 +64,6 @@ export default function App() {
         };
         setAdminUser(userObj);
         setStoredAdmin(userObj);
-
-        // When authenticated as admin, activate realtime leads sync
-        if (!unsubscribeLeads) {
-          unsubscribeLeads = subscribeToFirestoreLeads((remoteLeads) => {
-            if (remoteLeads && remoteLeads.length > 0) {
-              setLeads(remoteLeads);
-              saveStoredLeads(remoteLeads);
-            }
-          });
-        }
-      } else {
-        if (unsubscribeLeads) {
-          unsubscribeLeads();
-          unsubscribeLeads = null;
-        }
       }
     });
 
@@ -151,6 +151,22 @@ export default function App() {
     triggerToast('Todos os registos de leads e faturamento foram zerados com sucesso!');
   };
 
+  const handleRefreshLeads = async () => {
+    try {
+      const remoteLeads = await loadAllLeadsFromFirestore();
+      if (remoteLeads && remoteLeads.length > 0) {
+        setLeads(remoteLeads);
+        saveStoredLeads(remoteLeads);
+        triggerToast(`Sincronização concluída! ${remoteLeads.length} leads atualizados da nuvem.`);
+      } else {
+        triggerToast('Sincronização concluída! Base de dados na nuvem consultada.');
+      }
+    } catch (e) {
+      console.warn('Erro ao atualizar leads da nuvem:', e);
+      triggerToast('Aviso: Não foi possível atualizar da nuvem no momento.');
+    }
+  };
+
   // Admin routing check
   const handleGoToAdmin = () => {
     if (adminUser) {
@@ -221,6 +237,7 @@ export default function App() {
           onUpdateLeadStatus={handleUpdateLeadStatus}
           onDeleteLead={handleDeleteLead}
           onClearAllLeads={handleClearAllLeads}
+          onRefreshLeads={handleRefreshLeads}
           adminUser={adminUser}
           onLogout={handleAdminLogout}
           onViewStore={() => setCurrentView('landing')}

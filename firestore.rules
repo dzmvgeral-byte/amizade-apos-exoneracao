@@ -74,6 +74,12 @@ service cloud.firestore {
       allow write: if isSignedIn();
     }
 
+    // Public Banking & Payment Coordinates (Public read for customers, authenticated write for admin)
+    match /settings/banking {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
     match /gallery/{galleryId} {
       allow read: if true;
       allow write: if isSignedIn();

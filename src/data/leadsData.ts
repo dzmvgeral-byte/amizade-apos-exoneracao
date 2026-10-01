@@ -353,35 +353,53 @@ export function buildWhatsAppLink(
   if (!officialPhone) {
     officialPhone = '244923884120';
   }
-  
-  let physicalAlertNote = '';
-  if (wantsPhysicalAlert) {
-    physicalAlertNote = `\n🔔 *Interesse Adicional:* Sim, desejo ser avisado(a) quando o Livro Físico Impresso estiver disponível.`;
-  }
 
   const isPhysical = format === 'fisico';
-  const formatText = isPhysical ? 'Livro Físico Impresso (Com Capa & Orelhas)' : 'E-book Digital Completo (PDF HD + ePub)';
-  const priceText = isPhysical ? '10.000 Kz' : '5.000 Kz';
+  const formatLabel = isPhysical 
+    ? 'Livro Físico Impresso (Com Orelhas)' 
+    : 'E-book Digital Completo (PDF HD + ePub)';
+  const priceLabel = isPhysical ? '10.000 Kz' : '5.000 Kz';
 
-  let deliveryNote = '';
-  if (isPhysical && address) {
-    deliveryNote = `\n📍 *Endereço de Entrega (Angola):* ${address.trim()}\n🏛️ *Província:* ${province}`;
-  }
+  const cleanName = fullName.trim() || 'Cliente';
+  const cleanEmail = email.trim() || 'Não informado';
+  const cleanPhone = phone.trim() || 'Não informado';
+  const cleanProvince = province.trim() || 'Luanda';
+  const cleanAddress = (address || '').trim();
 
-  const text = `Olá, equipa DZMV! 🇦🇴
+  // Quote block (renders with grey bar / shaded background in WhatsApp - "informação a cinzinha")
+  const greyHighlightBlock = [
+    `> 📖 *DETALHES DO PEDIDO NO SITE:*`,
+    `> • *Livro:* Amizade após Exoneração (Eng. Dénis Zombo)`,
+    `> • *Formato Selecionado:* ${formatLabel}`,
+    `> • *Valor a Pagar:* ${priceLabel}`,
+    `> • *Método de Pagamento:* ${paymentMethod}`
+  ].join('\n');
 
-Acabei de concluir o meu registo na plataforma oficial para o livro:
-📖 *"Amizade após Exoneração"* — Eng. Dénis Zombo
-📦 Formato: ${formatText}
-💰 Valor: ${priceText}
-💳 Forma de Pagamento Escolhida: *${paymentMethod}*
+  // Customer registration details
+  const customerDetails = [
+    `📋 *DADOS COMPLETOS DE CADASTRO:*`,
+    `• *Nome Completo:* ${cleanName}`,
+    `• *WhatsApp:* ${cleanPhone}`,
+    `• *E-mail:* ${cleanEmail}`,
+    `• *Província:* ${cleanProvince}`,
+    ...(isPhysical && cleanAddress ? [`• *Endereço de Entrega:* ${cleanAddress}`] : []),
+    ...(wantsPhysicalAlert ? [`• *Alerta Livro Físico:* Sim, desejo ser avisado(a) de novas tiragens físicas`] : [])
+  ].join('\n');
 
-📋 *Meus Dados de Registo:*
-👤 Nome: ${fullName.trim()}
-📧 E-mail: ${email.trim()}
-📱 WhatsApp: ${phone.trim()}${deliveryNote}${physicalAlertNote}
-
-📎 *Comprovativo:* Finalizei o pagamento e estou a anexar o meu comprovativo aqui nesta mensagem para que possam validar, aprovar e enviar o livro. Muito obrigado!`;
+  const text = [
+    `Olá! Tudo bem?`,
+    ``,
+    `Meu nome é *${cleanName}*. Acabei de preencher o formulário na plataforma oficial e pretendo comprar o livro *"Amizade após Exoneração"* do autor Eng. Dénis Zombo no formato *${isPhysical ? 'Físico Impresso' : 'Digital (E-book)'}*.`,
+    ``,
+    greyHighlightBlock,
+    ``,
+    customerDetails,
+    ``,
+    `💳 *CONFIRMAÇÃO DE PAGAMENTO:*`,
+    `Já efetuei o pagamento e estou a anexar o meu comprovativo aqui nesta mensagem para validação da equipa e envio/entrega do livro.`,
+    ``,
+    `Fico a aguardar a vossa confirmação. Muito obrigado(a)!`
+  ].join('\n');
 
   return `https://wa.me/${officialPhone}?text=${encodeURIComponent(text)}`;
 }

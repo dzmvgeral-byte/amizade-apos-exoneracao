@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { BOOK_METADATA } from '../data/bookData';
 import { AdminUser, getRegisteredAdmins, registerNewAdmin, setStoredAdmin } from '../data/leadsData';
-import { signInWithGoogle, loginWithEmail, registerWithEmail, sendPasswordReset } from '../firebase';
+import { signInWithGoogle, loginWithEmail, registerWithEmail, sendPasswordReset, ensureAdminFirebaseAuth } from '../firebase';
 
 interface LoginPortalProps {
   onLoginSuccess: (admin: AdminUser) => void;
@@ -137,6 +137,13 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({
     );
 
     if (found) {
+      // Ensure active Firebase admin session so Firestore rules allow reading and writing
+      try {
+        await ensureAdminFirebaseAuth();
+      } catch (e) {
+        console.warn('Firebase admin ensure notice:', e);
+      }
+
       const adminUser: AdminUser = {
         id: `adm-${Date.now()}`,
         name: found.name,

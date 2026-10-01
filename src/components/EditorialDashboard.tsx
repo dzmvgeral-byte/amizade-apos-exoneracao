@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BOOK_METADATA, BankingConfig, getStoredBankingConfig, saveStoredBankingConfig, GalleryImage, getStoredGallery, resetDefaultGallery } from '../data/bookData';
 import { saveGalleryToFirestore, loadGalleryFromFirestore, subscribeToGallery } from '../services/firebaseGallery';
+import { saveBankingToFirestore, loadBankingFromFirestore, subscribeToBanking } from '../services/firebaseBanking';
 import { Lead, AdminUser, buildAdminToLeadWhatsAppLink, getRegisteredAdmins, registerNewAdmin, deleteRegisteredAdmin, updateAdminPassword, updateAdminNameAndRole } from '../data/leadsData';
 import { changeFirebasePassword } from '../firebase';
 import { BroadcastModal } from './BroadcastModal';
@@ -12,6 +13,7 @@ interface EditorialDashboardProps {
   onUpdateLeadStatus: (leadId: string, newStatus: Lead['status']) => void;
   onDeleteLead: (leadId: string) => void;
   onClearAllLeads?: () => void;
+  onRefreshLeads?: () => Promise<void>;
   adminUser: AdminUser | null;
   onLogout: () => void;
   onViewStore: () => void;
@@ -23,6 +25,7 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
   onUpdateLeadStatus,
   onDeleteLead,
   onClearAllLeads,
+  onRefreshLeads,
   adminUser,
   onLogout,
   onViewStore,
@@ -59,7 +62,7 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
   const [newImageTitle, setNewImageTitle] = useState('');
   const [galleryFormError, setGalleryFormError] = useState<string | null>(null);
 
-  // Sync gallery with Firestore cloud database in real-time
+  // Sync gallery and banking coordinates with Firestore cloud database in real-time
   useEffect(() => {
     loadGalleryFromFirestore().then((imgs) => {
       if (imgs && imgs.length > 0) {
@@ -67,13 +70,30 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
       }
     });
 
-    const unsub = subscribeToGallery((imgs) => {
+    const unsubGallery = subscribeToGallery((imgs) => {
       if (imgs && imgs.length > 0) {
         setGalleryList(imgs);
       }
     });
 
-    return () => unsub();
+    loadBankingFromFirestore().then((cfg) => {
+      if (cfg) {
+        setBankingConfig(cfg);
+        setBankingForm(cfg);
+      }
+    });
+
+    const unsubBanking = subscribeToBanking((cfg) => {
+      if (cfg) {
+        setBankingConfig(cfg);
+        setBankingForm(cfg);
+      }
+    });
+
+    return () => {
+      unsubGallery();
+      unsubBanking();
+    };
   }, []);
 
   // Team & User management state
@@ -256,27 +276,41 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
     showToast('Ficheiro CSV de leads descarregado com sucesso!');
   };
 
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    try {
+      if (onRefreshLeads) {
+        await onRefreshLeads();
+      }
+      showToast('Sincronização com Cloud Firestore executada com sucesso!');
+    } catch (e) {
+      console.warn('Erro na sincronização manual:', e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const openWhatsAppChat = (lead: Lead) => {
     const url = buildAdminToLeadWhatsAppLink(lead, bankingConfig);
     window.open(url, '_blank');
   };
 
-  const handleSaveBankingConfig = (e: React.FormEvent) => {
+  const handleSaveBankingConfig = async (e: React.FormEvent) => {
     e.preventDefault();
-    saveStoredBankingConfig(bankingForm);
+    await saveBankingToFirestore(bankingForm);
     setBankingConfig(bankingForm);
-    showToast('Coordenadas de pagamento e número de redirecionamento WhatsApp salvos com sucesso!');
+    showToast('Coordenadas de pagamento e número WhatsApp atualizadas e sincronizadas na nuvem com sucesso!');
   };
 
-  const handleSaveWhatsAppRedirectNumber = () => {
+  const handleSaveWhatsAppRedirectNumber = async () => {
     const updated = {
       ...bankingForm,
       redirectWhatsAppPhone: bankingForm.redirectWhatsAppPhone || bankingForm.mcxPhone || '+244 923 884 120'
     };
-    saveStoredBankingConfig(updated);
+    await saveBankingToFirestore(updated);
     setBankingConfig(updated);
     setBankingForm(updated);
-    showToast('Número de WhatsApp para redirecionamento salvo com sucesso!');
+    showToast('Número de WhatsApp para redirecionamento salvo na nuvem com sucesso!');
   };
 
   const handleCreateNewUser = (e: React.FormEvent) => {
@@ -910,6 +944,18 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2.5">
+                    <button
+                      onClick={handleManualSync}
+                      disabled={isSyncing}
+                      className="px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-900 text-xs font-semibold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+                      title="Sincronizar leads com a base de dados Google Cloud Firestore"
+                    >
+                      <span className={`material-symbols-outlined text-[18px] text-amber-700 ${isSyncing ? 'animate-spin' : ''}`}>
+                        cloud_sync
+                      </span>
+                      <span>{isSyncing ? 'A Sincronizar...' : 'Sincronizar Nuvem'}</span>
+                    </button>
+
                     <button
                       onClick={handleExportCSV}
                       className="px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-800 text-xs font-semibold hover:bg-slate-50 transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
