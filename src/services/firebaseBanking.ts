@@ -20,7 +20,9 @@ export function sanitizeBankingConfig(config: Partial<BankingConfig>): BankingCo
     kwikNibOrPhone: (config.kwikNibOrPhone || DEFAULT_BANKING_CONFIG.kwikNibOrPhone).trim(),
     kwikBank: (config.kwikBank || DEFAULT_BANKING_CONFIG.kwikBank).trim(),
     instructions: (config.instructions || DEFAULT_BANKING_CONFIG.instructions).trim(),
-    redirectWhatsAppPhone: (config.redirectWhatsAppPhone || config.mcxPhone || DEFAULT_BANKING_CONFIG.redirectWhatsAppPhone || '').trim(),
+    redirectWhatsAppPhone: ((config.redirectWhatsAppPhone && config.redirectWhatsAppPhone !== '+244 923 884 120'
+      ? config.redirectWhatsAppPhone
+      : DEFAULT_BANKING_CONFIG.redirectWhatsAppPhone) || '+244 943 793 069').trim(),
   };
 }
 

@@ -214,7 +214,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       format, 
       wantsPhysicalAlert, 
       paymentMethodLabel,
-      bankingConfig.redirectWhatsAppPhone || bankingConfig.mcxPhone,
+      bankingConfig.redirectWhatsAppPhone || '+244 943 793 069',
       fullAddress
     );
     setSubmittedWhatsAppUrl(whatsappUrl);
@@ -1322,7 +1322,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     : paymentMethod === 'iban' 
                     ? 'Transferência IBAN' 
                     : 'Transferência KWIK',
-                  bankingConfig.redirectWhatsAppPhone || bankingConfig.mcxPhone,
+                  bankingConfig.redirectWhatsAppPhone || '+244 943 793 069',
                   deliveryAddress
                 )}
                 target="_blank"
@@ -1840,40 +1840,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       )}
 
       {/* REFINED FOOTER */}
-      <footer className="w-full bg-white border-t border-slate-200 py-12">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex flex-col items-center md:items-start text-center md:text-left gap-1">
-            <div className="flex items-center gap-2">
-              <span className="font-serif-editorial text-lg text-slate-900 font-bold">
-                DZMV • {BOOK_METADATA.title}
-              </span>
-              <span className="text-slate-300">•</span>
-              <span className="text-xs text-amber-800 font-semibold">{BOOK_METADATA.author}</span>
-            </div>
-            <p className="text-xs text-slate-500 max-w-md">
-              Lançamento e distribuição oficial DZMV. Edição, diagramação e revisão técnica da Editora Sábhia (Brasil).
-            </p>
-          </div>
-
-          <div className="flex flex-col items-center md:items-end gap-3 text-xs text-slate-500">
-            {/* Exclusive Administrator Access Button at Footer */}
-            <button
-              onClick={onGoToLogin}
-              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs transition-colors flex items-center gap-2 border border-slate-200 cursor-pointer shadow-2xs"
-              title="Acesso reservado apenas para administradores e equipa editorial"
-            >
-              <span className="material-symbols-outlined text-[18px] text-amber-700">admin_panel_settings</span>
-              <span>Área Administrativa (Acesso Reservado)</span>
-            </button>
-            <p>© 2026 DZMV. Todos os direitos reservados • Edição Editora Sábhia (Brasil).</p>
-          </div>
+      <footer className="w-full bg-white border-t border-slate-200 py-10">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12 flex flex-col items-center justify-center gap-3 text-center text-xs text-slate-500">
+          {/* Exclusive Administrator Access Button at Footer */}
+          <button
+            onClick={onGoToLogin}
+            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 font-bold text-xs transition-colors flex items-center gap-2 border border-slate-200 cursor-pointer shadow-2xs"
+            title="Acesso reservado apenas para administradores e equipa editorial"
+          >
+            <span className="material-symbols-outlined text-[18px] text-amber-700">admin_panel_settings</span>
+            <span>Área Administrativa (Acesso Reservado)</span>
+          </button>
+          <p>© 2026 DZMV. Todos os direitos reservados • Edição Editora Sábhia (Brasil).</p>
         </div>
       </footer>
 
       {/* FLOATING WHATSAPP BUTTON (Compact & Collapsible) */}
       <aside aria-label="Apoio ao Leitor WhatsApp" className="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-40 md:z-50 flex items-center">
         <a
-          href="https://wa.me/244923884120?text=Ol%C3%A1%2C%20Editora%20S%C3%A1bhia!%20Gostaria%20de%20saber%20mais%20informa%C3%A7%C3%B5es%20sobre%20o%20livro%20'Amizade%20ap%C3%B3s%20Exonera%C3%A7%C3%A3o'%20do%20Eng.%20D%C3%A9nis%20Zombo."
+          href={`https://wa.me/${(() => {
+            const raw = (bankingConfig.redirectWhatsAppPhone || '+244 943 793 069').replace(/[^0-9]/g, '');
+            return raw.length === 9 && (raw.startsWith('9') || raw.startsWith('2')) ? `244${raw}` : raw || '244943793069';
+          })()}?text=${encodeURIComponent("Olá, Editora Sábhia! Gostaria de saber mais informações sobre o livro 'Amizade após Exoneração' do Eng. Dénis Zombo.")}`}
           target="_blank"
           rel="noopener noreferrer"
           className="group flex items-center justify-start gap-2.5 bg-[#25D366] hover:bg-[#1EBE5D] text-slate-950 p-3 rounded-full shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 max-w-[48px] hover:max-w-[280px] overflow-hidden whitespace-nowrap"

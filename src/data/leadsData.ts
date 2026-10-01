@@ -1,4 +1,4 @@
-import { getStoredBankingConfig } from './bookData';
+import { getStoredBankingConfig, DEFAULT_BANKING_CONFIG } from './bookData';
 
 export interface Lead {
   id: string;
@@ -336,13 +336,13 @@ export function buildWhatsAppLink(
   customWhatsAppPhone?: string,
   address?: string
 ): string {
-  let targetNumber = customWhatsAppPhone || '';
-  if (!targetNumber) {
+  let targetNumber = (customWhatsAppPhone || '').trim();
+  if (!targetNumber || targetNumber === '+244 923 884 120' || targetNumber === '244923884120') {
     try {
       const cfg = getStoredBankingConfig();
-      targetNumber = cfg.redirectWhatsAppPhone || cfg.mcxPhone || '244923884120';
+      targetNumber = cfg.redirectWhatsAppPhone || DEFAULT_BANKING_CONFIG.redirectWhatsAppPhone || '244943793069';
     } catch {
-      targetNumber = '244923884120';
+      targetNumber = '244943793069';
     }
   }
 
@@ -350,8 +350,8 @@ export function buildWhatsAppLink(
   if (officialPhone.length === 9 && (officialPhone.startsWith('9') || officialPhone.startsWith('2'))) {
     officialPhone = `244${officialPhone}`;
   }
-  if (!officialPhone) {
-    officialPhone = '244923884120';
+  if (!officialPhone || officialPhone === '244923884120') {
+    officialPhone = '244943793069';
   }
 
   const isPhysical = format === 'fisico';

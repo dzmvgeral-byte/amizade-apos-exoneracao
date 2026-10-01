@@ -33,15 +33,15 @@ export interface BankingConfig {
 }
 
 export const DEFAULT_BANKING_CONFIG: BankingConfig = {
-  bank: "Banco Angolano de Investimentos (BAI) / BFA",
-  iban: "AO06.0040.0000.9876.5432.1019.2",
-  mcxPhone: "+244 923 884 120",
-  beneficiary: "DZMV • Lançamento Oficial (Editora Sábhia - Brasil)",
-  kwikAccountName: "Dénis Zombo Mendonça Vasco (DZMV)",
-  kwikNibOrPhone: "+244 923 884 120",
-  kwikBank: "Rede KWIK (EMIS) / BAI Directo",
+  bank: "BIC",
+  iban: "AO06.0051 0000 19037911101 75",
+  mcxPhone: "923 849 576",
+  beneficiary: "Dénis Zombo Mendonça Vasco",
+  kwikAccountName: "Dénis Zombo Mendonça Vasco",
+  kwikNibOrPhone: "AO06.0051 0000 19037911101 75",
+  kwikBank: "Rede KWIK (EMIS)",
   instructions: "Efetue o pagamento via Multicaixa Express, Transferência IBAN ou Transferência KWIK e anexe o comprovativo no WhatsApp para liberação imediata do seu E-book.",
-  redirectWhatsAppPhone: "+244 923 884 120"
+  redirectWhatsAppPhone: "+244 943 793 069"
 };
 
 const BANKING_STORAGE_KEY = 'dzmv_banking_config_v1';
@@ -54,13 +54,17 @@ export function getStoredBankingConfig(): BankingConfig {
       return DEFAULT_BANKING_CONFIG;
     }
     const parsed = JSON.parse(raw);
+    const validRedirectPhone = parsed.redirectWhatsAppPhone && parsed.redirectWhatsAppPhone !== '+244 923 884 120'
+      ? parsed.redirectWhatsAppPhone
+      : DEFAULT_BANKING_CONFIG.redirectWhatsAppPhone;
+
     return {
       ...DEFAULT_BANKING_CONFIG,
       ...parsed,
+      redirectWhatsAppPhone: validRedirectPhone,
       kwikAccountName: parsed.kwikAccountName || parsed.quickAccountName || DEFAULT_BANKING_CONFIG.kwikAccountName,
       kwikNibOrPhone: parsed.kwikNibOrPhone || parsed.quickNibOrPhone || DEFAULT_BANKING_CONFIG.kwikNibOrPhone,
       kwikBank: parsed.kwikBank || parsed.quickBank || DEFAULT_BANKING_CONFIG.kwikBank,
-      redirectWhatsAppPhone: parsed.redirectWhatsAppPhone || parsed.mcxPhone || DEFAULT_BANKING_CONFIG.redirectWhatsAppPhone,
     };
   } catch {
     return DEFAULT_BANKING_CONFIG;

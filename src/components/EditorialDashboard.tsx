@@ -303,9 +303,10 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
   };
 
   const handleSaveWhatsAppRedirectNumber = async () => {
+    const cleanRedirect = (bankingForm.redirectWhatsAppPhone || '+244 943 793 069').trim();
     const updated = {
       ...bankingForm,
-      redirectWhatsAppPhone: bankingForm.redirectWhatsAppPhone || bankingForm.mcxPhone || '+244 923 884 120'
+      redirectWhatsAppPhone: cleanRedirect
     };
     await saveBankingToFirestore(updated);
     setBankingConfig(updated);
@@ -1476,9 +1477,9 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                       <input
                         type="text"
                         required
-                        value={bankingForm.redirectWhatsAppPhone || bankingForm.mcxPhone || ''}
+                        value={bankingForm.redirectWhatsAppPhone || ''}
                         onChange={(e) => setBankingForm({ ...bankingForm, redirectWhatsAppPhone: e.target.value })}
-                        placeholder="+244 923 884 120"
+                        placeholder="+244 943 793 069"
                         className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                       />
                       <button
@@ -2040,9 +2041,9 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                       </span>
                       <input
                         type="text"
-                        value={bankingForm.redirectWhatsAppPhone || bankingForm.mcxPhone || ''}
+                        value={bankingForm.redirectWhatsAppPhone || ''}
                         onChange={(e) => setBankingForm({ ...bankingForm, redirectWhatsAppPhone: e.target.value })}
-                        placeholder="+244 923 884 120"
+                        placeholder="+244 943 793 069"
                         className="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
                       />
                     </div>
