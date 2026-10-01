@@ -1188,14 +1188,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <button
                     type="button"
                     onClick={() => setPaymentMethod('iban')}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-center ${
                       paymentMethod === 'iban'
                         ? 'border-amber-600 bg-amber-50/80 ring-2 ring-amber-500/30 font-bold text-amber-950'
                         : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
                     }`}
                   >
                     <span className="block text-xs font-bold">Transferência IBAN</span>
-                    <span className="block text-[10px] text-slate-500 mt-0.5">BAI, BFA ou Outros</span>
                   </button>
 
                   <button
