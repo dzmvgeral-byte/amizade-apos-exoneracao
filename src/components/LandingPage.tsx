@@ -395,13 +395,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     alt="Livro 3D Amizade após Exoneração - Eng. Dénis Zombo"
                     className="w-full h-auto object-cover rounded-xl"
                   />
-                  <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600 font-semibold">
-                    <span className="flex items-center gap-1 text-amber-700 font-bold">
-                      <span className="material-symbols-outlined text-[15px]">auto_stories</span>
-                      E-book + Impresso 2026
-                    </span>
-                    <span>{BOOK_METADATA.authorShort}</span>
-                  </div>
                 </div>
               </div>
             </div>
