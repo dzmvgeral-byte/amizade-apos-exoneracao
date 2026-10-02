@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BOOK_METADATA, BankingConfig, getStoredBankingConfig, saveStoredBankingConfig, GalleryImage, getStoredGallery, resetDefaultGallery } from '../data/bookData';
 import { saveGalleryToFirestore, loadGalleryFromFirestore, subscribeToGallery } from '../services/firebaseGallery';
 import { saveBankingToFirestore, loadBankingFromFirestore, subscribeToBanking } from '../services/firebaseBanking';
@@ -61,6 +61,63 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
   const [newImageUrl, setNewImageUrl] = useState('');
   const [newImageTitle, setNewImageTitle] = useState('');
   const [galleryFormError, setGalleryFormError] = useState<string | null>(null);
+
+  // Bulk gallery import state
+  const [galleryAddMode, setGalleryAddMode] = useState<'bulk' | 'single'>('bulk');
+  const [bulkUrlsText, setBulkUrlsText] = useState('');
+  const [bulkDefaultPrefix, setBulkDefaultPrefix] = useState('Eng. Dénis Zombo Vasco');
+  const [bulkImportReport, setBulkImportReport] = useState<{
+    totalFound: number;
+    newCount: number;
+    duplicateCount: number;
+  } | null>(null);
+
+  // Normalizes an image URL for accurate comparison and duplicate avoidance
+  const normalizeImageUrl = (url: string) => {
+    try {
+      const u = new URL(url.trim());
+      return `${u.origin}${u.pathname}`.toLowerCase().replace(/\/$/, '');
+    } catch {
+      return url.trim().toLowerCase().replace(/\/$/, '');
+    }
+  };
+
+  // Extracts all URLs from bulk text (separated by lines, commas, or spaces)
+  const extractUrlsFromText = (text: string): string[] => {
+    if (!text.trim()) return [];
+    const matches = text.match(/(https?:\/\/[^\s"',<>]+)/gi) || [];
+    return matches.map(u => u.replace(/[.,;!?)>]+$/, '').trim()).filter(Boolean);
+  };
+
+  // Live real-time analysis of the pasted bulk URLs with duplicate comparison
+  const analyzedUrls = useMemo(() => {
+    const rawList = extractUrlsFromText(bulkUrlsText);
+    const existingNormalized = new Set(galleryList.map(item => normalizeImageUrl(item.url)));
+    
+    const seenInBatch = new Set<string>();
+    const newUrls: string[] = [];
+    const duplicateUrls: string[] = [];
+
+    for (const url of rawList) {
+      const norm = normalizeImageUrl(url);
+      if (seenInBatch.has(norm)) {
+        continue;
+      }
+      seenInBatch.add(norm);
+
+      if (existingNormalized.has(norm)) {
+        duplicateUrls.push(url);
+      } else {
+        newUrls.push(url);
+      }
+    }
+
+    return {
+      rawList,
+      newUrls,
+      duplicateUrls
+    };
+  }, [bulkUrlsText, galleryList]);
 
   // Sync gallery and banking coordinates with Firestore cloud database in real-time
   useEffect(() => {
@@ -372,6 +429,12 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
       return;
     }
 
+    const isDuplicate = galleryList.some(item => normalizeImageUrl(item.url) === normalizeImageUrl(trimmedUrl));
+    if (isDuplicate) {
+      setGalleryFormError('Esta imagem já existe na galeria (link duplicado evitado).');
+      return;
+    }
+
     const newItem: GalleryImage = {
       id: Date.now(),
       url: trimmedUrl,
@@ -385,6 +448,41 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
     setNewImageUrl('');
     setNewImageTitle('');
     showToast('Nova foto anexada à galeria com sucesso! O carrossel da landing page já foi atualizado na nuvem.');
+  };
+
+  const handleBulkImportGallery = (e: React.FormEvent) => {
+    e.preventDefault();
+    setGalleryFormError(null);
+    setBulkImportReport(null);
+
+    const { newUrls, duplicateUrls, rawList } = analyzedUrls;
+
+    if (newUrls.length === 0) {
+      if (duplicateUrls.length > 0) {
+        setGalleryFormError(`Todos os ${duplicateUrls.length} links fornecidos já constam na galeria. Para evitar duplicação, nenhum foi adicionado.`);
+      } else {
+        setGalleryFormError('Por favor, cole pelo menos um link válido de imagem (começando por http:// ou https://).');
+      }
+      return;
+    }
+
+    const newItems: GalleryImage[] = newUrls.map((url, idx) => ({
+      id: `${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+      url: url,
+      title: `${bulkDefaultPrefix.trim() || 'Eng. Dénis Zombo Vasco'} • Foto ${galleryList.length + idx + 1}`,
+      addedAt: new Date().toLocaleDateString('pt-PT')
+    }));
+
+    const updated = [...newItems, ...galleryList];
+    setGalleryList(updated);
+    saveGalleryToFirestore(updated);
+    setBulkUrlsText('');
+    setBulkImportReport({
+      totalFound: rawList.length,
+      newCount: newUrls.length,
+      duplicateCount: duplicateUrls.length
+    });
+    showToast(`✓ ${newUrls.length} novas fotos adicionadas à galeria! (${duplicateUrls.length} duplicadas ignoradas).`);
   };
 
   const handleDeleteGalleryImage = (id: string | number) => {
@@ -1793,10 +1891,10 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                       <span>Gestão Visual da Landing Page</span>
                     </div>
                     <h3 className="font-serif-editorial text-2xl font-bold text-slate-900 mt-1">
-                      Galeria de Fotos do Eng. Dénis Ângelo Vasco
+                      Galeria de Fotos do Eng. Dénis Zombo Vasco
                     </h3>
                     <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                      Adicione novos links de imagens, reordene as fotografias ou elimine as que já não deseja exibir no carrossel animado da Landing Page.
+                      Adicione novos links de imagens (em lote ou individual), reordene as fotografias ou elimine as que já não deseja exibir no carrossel animado da Landing Page.
                     </p>
                   </div>
 
@@ -1821,15 +1919,44 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                   </div>
                 </div>
 
-                {/* Form: Add New Photo via URL */}
-                <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-4">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <span className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[18px] text-amber-600">add_photo_alternate</span>
-                      Adicionar Nova Fotografia por Link (URL)
-                    </span>
+                {/* Form: Add Photos (Bulk or Single) */}
+                <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGalleryAddMode('bulk');
+                          setGalleryFormError(null);
+                        }}
+                        className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                          galleryAddMode === 'bulk'
+                            ? 'bg-amber-600 text-white shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[17px]">dynamic_feed</span>
+                        <span>Importar em Lote (Todas de Uma Só Vez)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGalleryAddMode('single');
+                          setGalleryFormError(null);
+                        }}
+                        className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                          galleryAddMode === 'single'
+                            ? 'bg-amber-600 text-white shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[17px]">add_photo_alternate</span>
+                        <span>Adicionar Foto Individual</span>
+                      </button>
+                    </div>
+
                     <span className="text-[11px] text-slate-500">
-                      Suporta links diretos do <strong>PostImages, Imgur, Cloudinary, Google</strong> etc.
+                      Suporta links do <strong>PostImages, Imgur, Cloudinary, Google</strong> etc.
                     </span>
                   </div>
 
@@ -1840,76 +1967,214 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                     </div>
                   )}
 
-                  <form onSubmit={handleAddGalleryImage} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                      {/* URL input */}
-                      <div className="md:col-span-7 space-y-1.5">
-                        <label className="text-xs font-bold text-slate-700">Link Direto da Imagem (URL) *</label>
-                        <div className="relative">
-                          <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">
-                            link
-                          </span>
-                          <input
-                            type="url"
-                            required
-                            value={newImageUrl}
-                            onChange={(e) => {
-                              setNewImageUrl(e.target.value);
-                              if (galleryFormError) setGalleryFormError(null);
-                            }}
-                            placeholder="Ex: https://i.postimg.cc/mZKpj1cS/foto-autor.jpg"
-                            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-xs font-mono font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
-                          />
-                        </div>
+                  {bulkImportReport && (
+                    <div className="p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-medium space-y-1">
+                      <div className="flex items-center gap-2 font-bold text-emerald-800">
+                        <span className="material-symbols-outlined text-base">check_circle</span>
+                        <span>Relatório da Importação Concluída com Sucesso:</span>
                       </div>
+                      <p>
+                        • <strong>{bulkImportReport.newCount} novas fotos</strong> foram adicionadas à galeria e sincronizadas na nuvem.
+                      </p>
+                      {bulkImportReport.duplicateCount > 0 && (
+                        <p className="text-emerald-700">
+                          • <strong>{bulkImportReport.duplicateCount} fotos duplicadas</strong> já existiam na galeria e foram ignoradas automaticamente para evitar repetição.
+                        </p>
+                      )}
+                    </div>
+                  )}
 
-                      {/* Title / Caption input */}
-                      <div className="md:col-span-5 space-y-1.5">
-                        <label className="text-xs font-bold text-slate-700">Título ou Legenda da Foto</label>
-                        <input
-                          type="text"
-                          value={newImageTitle}
-                          onChange={(e) => setNewImageTitle(e.target.value)}
-                          placeholder="Ex: Sessão Fotográfica • Luanda 2025"
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
+                  {/* MODE 1: BULK IMPORT (TODAS DE UMA SÓ VEZ) */}
+                  {galleryAddMode === 'bulk' && (
+                    <form onSubmit={handleBulkImportGallery} className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                          <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-amber-600 text-[18px]">format_list_bulleted</span>
+                            Cole Todos os Links das Imagens (Uma por linha ou separadas por espaço/vírgula):
+                          </label>
+                          <span className="text-[11px] text-slate-500">
+                            O sistema faz a comparação automática para <strong>não duplicar</strong> fotos que já existam.
+                          </span>
+                        </div>
+
+                        <textarea
+                          rows={6}
+                          required
+                          value={bulkUrlsText}
+                          onChange={(e) => {
+                            setBulkUrlsText(e.target.value);
+                            if (galleryFormError) setGalleryFormError(null);
+                          }}
+                          placeholder={`https://i.postimg.cc/L4J0j3sk/foto-1.jpg\nhttps://i.postimg.cc/PfCF1Qqz/foto-2.jpg\nhttps://i.postimg.cc/BZjw2BvD/foto-3.jpg\nhttps://i.postimg.cc/1R8YDrzp/foto-4.jpg`}
+                          className="w-full p-3.5 rounded-xl border border-slate-300 bg-slate-50 text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all shadow-2xs leading-relaxed"
                         />
                       </div>
-                    </div>
 
-                    {/* Live Preview Box if URL is typed */}
-                    {newImageUrl.trim() && (
-                      <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-4">
-                        <div className="w-16 h-20 rounded-lg overflow-hidden bg-slate-200 border border-slate-300 shrink-0 flex items-center justify-center">
-                          <img
-                            src={newImageUrl.trim()}
-                            alt="Prévia"
-                            onError={(e) => {
-                              (e.target as HTMLElement).style.display = 'none';
-                            }}
-                            className="w-full h-full object-cover"
+                      <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
+                        <div className="sm:col-span-6 space-y-1">
+                          <label className="text-xs font-bold text-slate-700">Legenda Padrão (Prefixo)</label>
+                          <input
+                            type="text"
+                            value={bulkDefaultPrefix}
+                            onChange={(e) => setBulkDefaultPrefix(e.target.value)}
+                            placeholder="Eng. Dénis Zombo Vasco"
+                            className="w-full px-3.5 py-2 rounded-xl border border-slate-300 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
                           />
                         </div>
-                        <div className="min-w-0 flex-1 text-xs">
-                          <span className="text-[10px] uppercase font-bold text-amber-800 block">Pré-visualização do Link:</span>
-                          <strong className="text-slate-900 block truncate">{newImageTitle.trim() || 'Sem legenda específica'}</strong>
-                          <span className="text-slate-500 font-mono text-[10px] truncate block">{newImageUrl.trim()}</span>
+
+                        {/* Real-time comparison chips */}
+                        <div className="sm:col-span-6 flex flex-wrap items-center gap-2 sm:justify-end pt-2 sm:pt-0">
+                          {analyzedUrls.rawList.length > 0 ? (
+                            <>
+                              <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200">
+                                Total: {analyzedUrls.rawList.length}
+                              </span>
+                              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300 flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[15px]">add_circle</span>
+                                {analyzedUrls.newUrls.length} Novas para Adicionar
+                              </span>
+                              {analyzedUrls.duplicateUrls.length > 0 && (
+                                <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-bold border border-amber-300 flex items-center gap-1" title="Estas imagens já existem na galeria e não serão duplicadas">
+                                  <span className="material-symbols-outlined text-[15px]">content_copy</span>
+                                  {analyzedUrls.duplicateUrls.length} Duplicadas (Ignoradas)
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">
+                              Cole os links acima para ver a comparação automática.
+                            </span>
+                          )}
                         </div>
                       </div>
-                    )}
 
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
-                      <span className="text-[11px] text-slate-500">
-                        Dica: As fotos adicionadas entram imediatamente no carrossel animado da página principal.
-                      </span>
-                      <button
-                        type="submit"
-                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">add</span>
-                        <span>Anexar Fotografia à Galeria</span>
-                      </button>
-                    </div>
-                  </form>
+                      {/* Visual Preview Grid of the New Detected Images */}
+                      {analyzedUrls.newUrls.length > 0 && (
+                        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+                          <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                            <span className="flex items-center gap-1.5 text-emerald-700">
+                              <span className="material-symbols-outlined text-sm">visibility</span>
+                              Pré-visualização das {analyzedUrls.newUrls.length} Novas Fotos a Adicionar:
+                            </span>
+                            <span className="text-slate-500 font-normal text-[11px]">
+                              Nenhuma duplicada será inserida
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2.5 max-h-56 overflow-y-auto p-1">
+                            {analyzedUrls.newUrls.map((url, idx) => (
+                              <div key={idx} className="relative group rounded-lg overflow-hidden bg-slate-200 border border-slate-300 aspect-3/4 flex items-center justify-center shadow-2xs">
+                                <img
+                                  src={url}
+                                  alt={`Nova foto ${idx + 1}`}
+                                  onError={(e) => {
+                                    (e.target as HTMLElement).style.opacity = '0.3';
+                                  }}
+                                  className="w-full h-full object-cover"
+                                />
+                                <span className="absolute bottom-1 left-1 bg-black/70 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                                  #{idx + 1}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                        <span className="text-[11px] text-slate-500">
+                          Todas as fotos importadas serão sincronizadas no Cloud Firestore e passarão a rodar no carrossel da Landing Page.
+                        </span>
+                        <button
+                          type="submit"
+                          disabled={analyzedUrls.newUrls.length === 0}
+                          className="w-full sm:w-auto px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">publish</span>
+                          <span>
+                            {analyzedUrls.newUrls.length > 0
+                              ? `Importar Todas as ${analyzedUrls.newUrls.length} Novas Fotos`
+                              : 'Cole os Links Acima para Importar'}
+                          </span>
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {/* MODE 2: SINGLE IMAGE ADD */}
+                  {galleryAddMode === 'single' && (
+                    <form onSubmit={handleAddGalleryImage} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                        {/* URL input */}
+                        <div className="md:col-span-7 space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700">Link Direto da Imagem (URL) *</label>
+                          <div className="relative">
+                            <span className="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-[18px]">
+                              link
+                            </span>
+                            <input
+                              type="url"
+                              required
+                              value={newImageUrl}
+                              onChange={(e) => {
+                                setNewImageUrl(e.target.value);
+                                if (galleryFormError) setGalleryFormError(null);
+                              }}
+                              placeholder="Ex: https://i.postimg.cc/mZKpj1cS/foto-autor.jpg"
+                              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-xs font-mono font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Title / Caption input */}
+                        <div className="md:col-span-5 space-y-1.5">
+                          <label className="text-xs font-bold text-slate-700">Título ou Legenda da Foto</label>
+                          <input
+                            type="text"
+                            value={newImageTitle}
+                            onChange={(e) => setNewImageTitle(e.target.value)}
+                            placeholder="Ex: Sessão Fotográfica • Luanda 2025"
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Live Preview Box if URL is typed */}
+                      {newImageUrl.trim() && (
+                        <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-4">
+                          <div className="w-16 h-20 rounded-lg overflow-hidden bg-slate-200 border border-slate-300 shrink-0 flex items-center justify-center">
+                            <img
+                              src={newImageUrl.trim()}
+                              alt="Prévia"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
+                              }}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1 text-xs">
+                            <span className="text-[10px] uppercase font-bold text-amber-800 block">Pré-visualização do Link:</span>
+                            <strong className="text-slate-900 block truncate">{newImageTitle.trim() || 'Sem legenda específica'}</strong>
+                            <span className="text-slate-500 font-mono text-[10px] truncate block">{newImageUrl.trim()}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
+                        <span className="text-[11px] text-slate-500">
+                          Dica: As fotos adicionadas entram imediatamente no carrossel animado da página principal.
+                        </span>
+                        <button
+                          type="submit"
+                          className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">add</span>
+                          <span>Anexar Fotografia à Galeria</span>
+                        </button>
+                      </div>
+                    </form>
+                  )}
                 </div>
 
                 {/* Existing Gallery Images Grid */}

@@ -484,16 +484,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     className="w-full h-auto object-cover object-center transform transition duration-700 group-hover:scale-[1.02]"
                   />
                 </div>
-
-                <div className="mt-4 pt-3.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px] text-amber-600">auto_stories</span>
-                    <span className="text-[11px] uppercase font-bold tracking-wider">
-                      Edição Oficial
-                    </span>
-                  </div>
-                  <span className="font-semibold text-slate-900">{BOOK_METADATA.authorShort}</span>
-                </div>
               </div>
             </div>
           </div>
@@ -1849,7 +1839,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             title="Acesso reservado apenas para administradores e equipa editorial"
           >
             <span className="material-symbols-outlined text-[18px] text-amber-700">admin_panel_settings</span>
-            <span>Área Administrativa (Acesso Reservado)</span>
+            <span>Área Administrativa</span>
           </button>
           <p>© 2026 DZMV. Todos os direitos reservados • Edição Editora Sábhia (Brasil).</p>
         </div>
