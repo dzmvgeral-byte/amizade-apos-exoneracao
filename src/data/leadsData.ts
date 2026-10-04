@@ -19,6 +19,8 @@ export interface Lead {
   notes?: string;
   whatsappMessageSent?: boolean;
   wantsPhysicalAlert?: boolean;
+  paymentTiming?: 'agora' | 'depois';
+  scheduledPeriod?: string;
 }
 
 export interface AdminUser {
@@ -70,8 +72,8 @@ const INITIAL_LEADS: Lead[] = [
     paymentMethod: 'Multicaixa Express',
     status: 'concluido',
     statusLabel: 'E-book Entregue',
-    createdAt: 'Hoje às 14:32',
-    timestamp: Date.now() - 3600000 * 2,
+    createdAt: '24/09/2026 às 14:32',
+    timestamp: 1790253120000,
     notes: 'Consultor Jurídico. Recebeu o link PDF + ePub no WhatsApp.',
     whatsappMessageSent: true,
   },
@@ -88,8 +90,8 @@ const INITIAL_LEADS: Lead[] = [
     paymentMethod: 'Pague na Entrega',
     status: 'contactado',
     statusLabel: 'Reserva Registada',
-    createdAt: 'Hoje às 13:18',
-    timestamp: Date.now() - 3600000 * 3,
+    createdAt: '24/09/2026 às 13:18',
+    timestamp: 1790248680000,
     notes: 'Diretora de RH. Solicitou reserva de exemplar autografado para quando a impressão for concluída.',
     whatsappMessageSent: true,
   },
@@ -106,8 +108,8 @@ const INITIAL_LEADS: Lead[] = [
     paymentMethod: 'Multicaixa Express',
     status: 'concluido',
     statusLabel: 'E-book Entregue',
-    createdAt: 'Hoje às 11:45',
-    timestamp: Date.now() - 3600000 * 5,
+    createdAt: '24/09/2026 às 11:45',
+    timestamp: 1790243100000,
     notes: 'Docente Universitário em Benguela.',
     whatsappMessageSent: true,
   },
@@ -124,8 +126,8 @@ const INITIAL_LEADS: Lead[] = [
     paymentMethod: 'Transferência IBAN',
     status: 'contactado',
     statusLabel: 'Contactado no WhatsApp',
-    createdAt: 'Hoje às 10:04',
-    timestamp: Date.now() - 3600000 * 7,
+    createdAt: '24/09/2026 às 10:04',
+    timestamp: 1790237040000,
     notes: 'Gestora Financeira no Cunene. Aguardando confirmação do talão.',
     whatsappMessageSent: true,
   },
@@ -142,12 +144,62 @@ const INITIAL_LEADS: Lead[] = [
     paymentMethod: 'Pague na Entrega',
     status: 'contactado',
     statusLabel: 'Reserva Registada',
-    createdAt: 'Ontem às 18:20',
-    timestamp: Date.now() - 3600000 * 24,
+    createdAt: '23/09/2026 às 18:20',
+    timestamp: 1790176800000,
     notes: 'Empresário em Luanda. Reservou exemplar para entrega no Miramar.',
     whatsappMessageSent: true,
   },
 ];
+
+/**
+ * Formata com precisão a data e horário em que o lead efetuou o registo/reserva.
+ * Substitui o texto estático "Agora mesmo" ou descritivo pela data e hora reais (ex: "04/10/2026 às 19:20").
+ */
+export function formatLeadRegistrationDate(lead: { createdAt?: string; timestamp?: number; id?: string }): string {
+  // 1. Se createdAt já for uma data real com dia e hora (e não 'Agora mesmo' ou 'Hoje às...')
+  if (lead.createdAt && lead.createdAt.trim() && lead.createdAt.trim() !== 'Agora mesmo') {
+    if (!lead.createdAt.startsWith('Hoje') && !lead.createdAt.startsWith('Ontem')) {
+      return lead.createdAt;
+    }
+  }
+
+  // 2. Tentar obter timestamp numérico diretamente ou a partir do ID (lead-<timestamp>)
+  let timeVal = lead.timestamp;
+  if (!timeVal && lead.id && lead.id.startsWith('lead-')) {
+    const parsed = parseInt(lead.id.replace('lead-', ''), 10);
+    if (!isNaN(parsed) && parsed > 1600000000000) {
+      timeVal = parsed;
+    }
+  }
+
+  // 3. Se houver um timestamp numérico válido, formatar com dia, mês, ano e hora:minuto
+  if (timeVal && !isNaN(timeVal)) {
+    const d = new Date(timeVal);
+    if (!isNaN(d.getTime())) {
+      const datePart = d.toLocaleDateString('pt-PT', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+      const timePart = d.toLocaleTimeString('pt-PT', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      return `${datePart} às ${timePart}`;
+    }
+  }
+
+  // 4. Se createdAt tiver algum valor
+  if (lead.createdAt && lead.createdAt.trim() && lead.createdAt.trim() !== 'Agora mesmo') {
+    return lead.createdAt;
+  }
+
+  // 5. Fallback padrão com a data e hora do momento atual
+  const now = new Date();
+  const dPart = now.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const tPart = now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+  return `${dPart} às ${tPart}`;
+}
 
 const LEADS_STORAGE_KEY = 'sabhia_leads_v1';
 const ADMIN_STORAGE_KEY = 'sabhia_current_admin_v1';
@@ -334,7 +386,9 @@ export function buildWhatsAppLink(
   wantsPhysicalAlert: boolean = false,
   paymentMethod: string = 'Multicaixa Express',
   customWhatsAppPhone?: string,
-  address?: string
+  address?: string,
+  paymentTiming: 'agora' | 'depois' = 'agora',
+  scheduledPeriod?: string
 ): string {
   let targetNumber = (customWhatsAppPhone || '').trim();
   if (!targetNumber || targetNumber === '+244 923 884 120' || targetNumber === '244923884120') {
@@ -366,13 +420,21 @@ export function buildWhatsAppLink(
   const cleanProvince = province.trim() || 'Luanda';
   const cleanAddress = (address || '').trim();
 
+  const isScheduled = paymentTiming === 'depois';
+
   // Quote block (renders with grey bar / shaded background in WhatsApp - "informação a cinzinha")
   const greyHighlightBlock = [
     `> 📖 *DETALHES DO PEDIDO NO SITE:*`,
     `> • *Livro:* Amizade após Exoneração (Eng. Dénis Zombo)`,
     `> • *Formato Selecionado:* ${formatLabel}`,
     `> • *Valor a Pagar:* ${priceLabel}`,
-    `> • *Método de Pagamento:* ${paymentMethod}`
+    ...(isScheduled ? [
+      `> • *Modalidade:* 🗓️ Reserva com Pagamento Agendado`,
+      `> • *Previsão de Pagamento:* ${scheduledPeriod || 'Nos próximos dias'}`
+    ] : [
+      `> • *Modalidade:* 💳 Pagamento Imediato`
+    ]),
+    `> • *Método Escolhido:* ${paymentMethod}`
   ].join('\n');
 
   // Customer registration details
@@ -386,17 +448,29 @@ export function buildWhatsAppLink(
     ...(wantsPhysicalAlert ? [`• *Alerta Livro Físico:* Sim, desejo ser avisado(a) de novas tiragens físicas`] : [])
   ].join('\n');
 
+  const actionText = isScheduled
+    ? [
+        `🗓️ *AGENDAMENTO DE PAGAMENTO & RESERVA:*`,
+        `Gostaria de garantir a reserva do meu exemplar e *agendei o pagamento para:*`,
+        `⏰ *${scheduledPeriod || 'Nos próximos dias'}*`,
+        ``,
+        `Por favor, guardem o meu exemplar! Assim que efetuar o pagamento neste período, enviarei o respetivo comprovativo por aqui para validação e liberação.`
+      ]
+    : [
+        `💳 *CONFIRMAÇÃO DE PAGAMENTO:*`,
+        `Já efetuei o pagamento e estou a anexar o meu comprovativo aqui nesta mensagem para validação da equipa e envio/entrega do livro.`
+      ];
+
   const text = [
     `Olá! Tudo bem?`,
     ``,
-    `Meu nome é *${cleanName}*. Acabei de preencher o formulário na plataforma oficial e pretendo comprar o livro *"Amizade após Exoneração"* do autor Eng. Dénis Zombo no formato *${isPhysical ? 'Físico Impresso' : 'Digital (E-book)'}*.`,
+    `Meu nome é *${cleanName}*. Acabei de preencher o formulário na plataforma oficial e pretendo adquirir o livro *"Amizade após Exoneração"* do autor Eng. Dénis Zombo no formato *${isPhysical ? 'Físico Impresso' : 'Digital (E-book)'}*.`,
     ``,
     greyHighlightBlock,
     ``,
     customerDetails,
     ``,
-    `💳 *CONFIRMAÇÃO DE PAGAMENTO:*`,
-    `Já efetuei o pagamento e estou a anexar o meu comprovativo aqui nesta mensagem para validação da equipa e envio/entrega do livro.`,
+    ...actionText,
     ``,
     `Fico a aguardar a vossa confirmação. Muito obrigado(a)!`
   ].join('\n');
@@ -453,6 +527,10 @@ Por favor, confirme se prefere o envio direto aqui pelo WhatsApp ou no seu e-mai
       ? `\n📦 *Nota Registada:* Confirmamos que solicitou aviso prioritário para quando a tiragem impressa física estiver pronta.`
       : '';
 
+    const scheduleNote = lead.paymentTiming === 'depois'
+      ? `\n🗓️ *Previsão de Pagamento Agendada:* ${lead.scheduledPeriod || 'Nos próximos dias'} (Exemplar devidamente reservado)`
+      : '';
+
     const addressNote = lead.address ? `\n📍 Endereço de Entrega: ${lead.address}` : '';
 
     const priceLabel = lead.format === 'fisico' ? '10.000 Kz' : '5.000 Kz';
@@ -464,7 +542,7 @@ Aqui é da equipa oficial DZMV. Confirmamos a receção do seu pedido para o liv
 📋 *Detalhes do Pedido:*
 • Item: ${lead.formatLabel} (${priceLabel})
 • Método Escolhido: ${lead.paymentMethod}
-• Província: ${lead.province}${addressNote}${physicalNote}
+• Província: ${lead.province}${scheduleNote}${addressNote}${physicalNote}
 
 💳 *Coordenadas para Liquidação:*
 ${paymentDetail}

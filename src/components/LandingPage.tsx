@@ -38,6 +38,67 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
 
+  // Payment timing mode: 'agora' (immediate payment) vs 'depois' (scheduled payment)
+  const [paymentTiming, setPaymentTiming] = useState<'agora' | 'depois'>('agora');
+  const [scheduleOption, setScheduleOption] = useState<'3dias' | 'esta_semana' | 'proxima_semana' | 'fim_do_mes' | 'personalizado'>('esta_semana');
+  const [customDateStart, setCustomDateStart] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 2);
+    return d.toISOString().split('T')[0];
+  });
+  const [customDateEnd, setCustomDateEnd] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().split('T')[0];
+  });
+
+  const getSchedulePeriodLabel = (): string => {
+    const now = new Date();
+    const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+    if (scheduleOption === '3dias') {
+      const d1 = new Date(now);
+      const d2 = new Date(now);
+      d2.setDate(d2.getDate() + 3);
+      return `Entre ${d1.getDate()} e ${d2.getDate()} de ${months[d2.getMonth()]}`;
+    }
+
+    if (scheduleOption === 'esta_semana') {
+      const dayOfWeek = now.getDay();
+      const daysUntilSunday = (7 - dayOfWeek) % 7 || 7;
+      const sunday = new Date(now);
+      sunday.setDate(sunday.getDate() + daysUntilSunday);
+      return `Esta semana (até Domingo, ${sunday.getDate()} de ${months[sunday.getMonth()]})`;
+    }
+
+    if (scheduleOption === 'proxima_semana') {
+      const dayOfWeek = now.getDay();
+      const nextMon = new Date(now);
+      nextMon.setDate(nextMon.getDate() + ((1 + 7 - dayOfWeek) % 7 || 7));
+      const nextSun = new Date(nextMon);
+      nextSun.setDate(nextSun.getDate() + 6);
+      return `Na próxima semana (entre ${nextMon.getDate()} e ${nextSun.getDate()} de ${months[nextSun.getMonth()]})`;
+    }
+
+    if (scheduleOption === 'fim_do_mes') {
+      const monthIndex = now.getMonth();
+      return `No final do mês (entre 25 e 30 de ${months[monthIndex]})`;
+    }
+
+    // personalizado
+    if (customDateStart && customDateEnd) {
+      try {
+        const [, m1, d1] = customDateStart.split('-').map(Number);
+        const [, m2, d2] = customDateEnd.split('-').map(Number);
+        return `Entre ${d1} de ${months[m1 - 1]} e ${d2} de ${months[m2 - 1]}`;
+      } catch {
+        return `Entre ${customDateStart} e ${customDateEnd}`;
+      }
+    }
+
+    return 'Nos próximos dias';
+  };
+
   const [selectedGalleryImage, setSelectedGalleryImage] = useState<{ url: string; title: string } | null>(null);
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>(() => getStoredGallery());
 
@@ -186,8 +247,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }
   };
 
-  const handleConfirmData = () => {
+  const handleConfirmData = (chosenTiming: 'agora' | 'depois' = 'agora') => {
     setIsProcessing(true);
+    setPaymentTiming(chosenTiming);
 
     const isPhysical = format === 'fisico';
     const price = isPhysical ? BOOK_METADATA.prices.physicalKz : BOOK_METADATA.prices.ebookKz;
@@ -205,6 +267,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       ? 'Transferência IBAN' 
       : 'Transferência KWIK';
 
+    const currentSchedule = getSchedulePeriodLabel();
+
     // 1. Build the personalized WhatsApp message URL
     const whatsappUrl = buildWhatsAppLink(
       fullName, 
@@ -215,11 +279,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       wantsPhysicalAlert, 
       paymentMethodLabel,
       bankingConfig.redirectWhatsAppPhone || '+244 943 793 069',
-      fullAddress
+      fullAddress,
+      chosenTiming,
+      currentSchedule
     );
     setSubmittedWhatsAppUrl(whatsappUrl);
 
     // 2. Register lead
+    const now = new Date();
+    const formattedDate = now.toLocaleDateString('pt-PT', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    const formattedTime = now.toLocaleTimeString('pt-PT', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    const registrationDateTime = `${formattedDate} às ${formattedTime}`;
+
     const newLead: Lead = {
       id: `lead-${Date.now()}`,
       fullName: fullName.trim(),
@@ -234,13 +312,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       paymentMethod: paymentMethodLabel,
       status: 'novo',
       statusLabel: 'Novo Lead',
-      createdAt: 'Agora mesmo',
+      createdAt: registrationDateTime,
       timestamp: Date.now(),
-      notes: isPhysical
-        ? `Pagamento: ${paymentMethodLabel}. Livro Físico Impresso (10.000 Kz). Endereço de Entrega: ${fullAddress} (${province}).`
-        : `Pagamento: ${paymentMethodLabel}. E-book Digital (5.000 Kz).`,
+      notes: chosenTiming === 'depois'
+        ? `[RESERVA AGENDADA] Previsão de Pagamento: ${currentSchedule}. Método: ${paymentMethodLabel}. ${isPhysical ? `Livro Físico Impresso (10.000 Kz). Endereço de Entrega: ${fullAddress} (${province}).` : 'E-book Digital (5.000 Kz).'}`
+        : isPhysical
+        ? `Pagamento Imediato: ${paymentMethodLabel}. Livro Físico Impresso (10.000 Kz). Endereço de Entrega: ${fullAddress} (${province}).`
+        : `Pagamento Imediato: ${paymentMethodLabel}. E-book Digital (5.000 Kz).`,
       whatsappMessageSent: true,
       wantsPhysicalAlert: wantsPhysicalAlert,
+      paymentTiming: chosenTiming,
+      scheduledPeriod: chosenTiming === 'depois' ? currentSchedule : undefined
     };
 
     setTimeout(() => {
@@ -562,7 +644,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-4 flex flex-col justify-between">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-xl">🇦🇴</span>
                     <span className="font-bold text-sm text-amber-300 uppercase tracking-wider">Leitores em Angola</span>
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed">
@@ -594,7 +675,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">🇧🇷 🌍</span>
                       <span className="font-bold text-sm text-amber-300 uppercase tracking-wider">Brasil & Exterior</span>
                     </div>
                     <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/30">
@@ -1079,40 +1159,56 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start gap-2">
                 <span className="material-symbols-outlined text-blue-600 text-lg shrink-0 mt-0.5">info</span>
                 <p>
-                  Ao confirmar, o seu registo será guardado e abrirá a página com as opções de pagamento (Express, IBAN, KWIK).
+                  Ao confirmar os dados, poderá optar por <strong>Pagar Agora</strong> ou <strong>Pagar Depois (Agendar Pagamento)</strong>.
                 </p>
               </div>
             </div>
 
-            {/* Modal Actions: Edit vs Confirm */}
-            <div className="p-5 sm:p-6 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={handleEditData}
-                className="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-300 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm transition-colors flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[18px]">edit</span>
-                <span>Editar Dados</span>
-              </button>
+            {/* Modal Actions: Edit vs Two Options (Pagar Agora vs Pagar Depois) */}
+            <div className="p-5 sm:p-6 bg-slate-50 border-t border-slate-200 space-y-3">
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span className="font-semibold text-slate-700">Selecione como deseja prosseguir:</span>
+                <button
+                  type="button"
+                  onClick={handleEditData}
+                  className="text-amber-800 hover:text-amber-900 font-bold underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">edit</span>
+                  <span>Editar Dados</span>
+                </button>
+              </div>
 
-              <button
-                type="button"
-                disabled={isProcessing}
-                onClick={handleConfirmData}
-                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs sm:text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-              >
-                {isProcessing ? (
-                  <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Botão 1: Pagar Agora */}
+                <button
+                  type="button"
+                  disabled={isProcessing}
+                  onClick={() => handleConfirmData('agora')}
+                  className="w-full py-3 px-4 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs sm:text-sm transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isProcessing ? (
                     <span className="material-symbols-outlined text-[18px] animate-spin">sync</span>
-                    <span>A Processar...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Confirmar & Escolher Pagamento</span>
-                    <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-                  </>
-                )}
-              </button>
+                  ) : (
+                    <span className="material-symbols-outlined text-[18px]">payments</span>
+                  )}
+                  <span>Confirmar & Pagar Agora</span>
+                </button>
+
+                {/* Botão 2: Pagar Depois (Agendar Reserva) */}
+                <button
+                  type="button"
+                  disabled={isProcessing}
+                  onClick={() => handleConfirmData('depois')}
+                  className="w-full py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-900 text-amber-300 font-bold text-xs sm:text-sm transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 border border-slate-700"
+                >
+                  {isProcessing ? (
+                    <span className="material-symbols-outlined text-[18px] animate-spin">sync</span>
+                  ) : (
+                    <span className="material-symbols-outlined text-[18px] text-amber-400">event_upcoming</span>
+                  )}
+                  <span>Confirmar & Pagar Depois</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1135,8 +1231,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   2/2
                 </div>
                 <div>
-                  <h3 className="font-bold text-base sm:text-lg">Passo 2: Dados de Pagamento 🇦🇴</h3>
-                  <p className="text-xs text-slate-300">Escolha como pretende efetuar o pagamento de {BOOK_METADATA.prices.ebookFormatted}</p>
+                  <h3 className="font-bold text-base sm:text-lg">
+                    {paymentTiming === 'agora' ? 'Passo 2: Dados de Pagamento 🇦🇴' : 'Passo 2: Agendamento de Reserva 🗓️'}
+                  </h3>
+                  <p className="text-xs text-slate-300">
+                    {paymentTiming === 'agora'
+                      ? `Efetue o pagamento de ${format === 'fisico' ? '10.000 Kz' : BOOK_METADATA.prices.ebookFormatted} via Multicaixa ou IBAN`
+                      : `Defina o período para pagamento de ${format === 'fisico' ? '10.000 Kz' : BOOK_METADATA.prices.ebookFormatted} e guarde a sua reserva`}
+                  </p>
                 </div>
               </div>
               <button
@@ -1148,150 +1250,355 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* Body */}
-            <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
-              {/* Payment Method Selector */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase text-slate-500 tracking-wider block">
-                  Selecione o Método de Pagamento:
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('express')}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                      paymentMethod === 'express'
-                        ? 'border-amber-600 bg-amber-50/80 ring-2 ring-amber-500/30 font-bold text-amber-950'
-                        : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
-                    }`}
-                  >
-                    <span className="block text-xs font-bold">Multicaixa Express</span>
-                    <span className="block text-[10px] text-slate-500 mt-0.5">Telemóvel Imediato</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('iban')}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-center ${
-                      paymentMethod === 'iban'
-                        ? 'border-amber-600 bg-amber-50/80 ring-2 ring-amber-500/30 font-bold text-amber-950'
-                        : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
-                    }`}
-                  >
-                    <span className="block text-xs font-bold">Transferência IBAN</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('kwik')}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                      paymentMethod === 'kwik'
-                        ? 'border-amber-600 bg-amber-50/80 ring-2 ring-amber-500/30 font-bold text-amber-950'
-                        : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
-                    }`}
-                  >
-                    <span className="block text-xs font-bold">Transferência KWIK</span>
-                    <span className="block text-[10px] text-slate-500 mt-0.5">NIB / Rede EMIS</span>
-                  </button>
-                </div>
+            <div className="p-5 sm:p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              {/* Timing Toggle Pills (Pagar Agora vs Pagar Depois) */}
+              <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPaymentTiming('agora')}
+                  className={`py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    paymentTiming === 'agora'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[17px]">payments</span>
+                  <span>Pagar Agora</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPaymentTiming('depois')}
+                  className={`py-2 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    paymentTiming === 'depois'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[17px]">event_upcoming</span>
+                  <span>Pagar Depois (Agendar)</span>
+                </button>
               </div>
 
-              {/* Payment Details Box for Reference */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-amber-600 text-[18px]">account_balance_wallet</span>
-                    Coordenadas: {paymentMethod === 'express' ? 'Multicaixa Express' : paymentMethod === 'iban' ? 'IBAN Oficial' : 'KWIK'}
-                  </span>
-                  {copiedCoordinate && (
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md animate-fade-in">
-                      {copiedCoordinate} copiado!
-                    </span>
-                  )}
-                </div>
+              {/* VIEW A: PAGAR AGORA */}
+              {paymentTiming === 'agora' ? (
+                <>
+                  {/* Payment Method Selector */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase text-slate-500 tracking-wider block">
+                      Selecione o Método de Pagamento:
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('express')}
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                          paymentMethod === 'express'
+                            ? 'border-amber-600 bg-amber-50/80 ring-2 ring-amber-500/30 font-bold text-amber-950'
+                            : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        <span className="block text-xs font-bold">Multicaixa Express</span>
+                        <span className="block text-[10px] text-slate-500 mt-0.5">Telemóvel Imediato</span>
+                      </button>
 
-                {paymentMethod === 'express' ? (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white p-3.5 rounded-xl border border-slate-200">
-                    <div>
-                      <span className="text-[10px] text-slate-500 uppercase font-bold block">Telemóvel Multicaixa Express DZMV:</span>
-                      <strong className="font-mono text-sm sm:text-base text-slate-900">{bankingConfig.mcxPhone}</strong>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('iban')}
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-center ${
+                          paymentMethod === 'iban'
+                            ? 'border-amber-600 bg-amber-50/80 ring-2 ring-amber-500/30 font-bold text-amber-950'
+                            : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        <span className="block text-xs font-bold">Transferência IBAN</span>
+                        <span className="block text-[10px] text-slate-500 mt-0.5">Conta Bancária</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod('kwik')}
+                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                          paymentMethod === 'kwik'
+                            ? 'border-amber-600 bg-amber-50/80 ring-2 ring-amber-500/30 font-bold text-amber-950'
+                            : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        <span className="block text-xs font-bold">Transferência KWIK</span>
+                        <span className="block text-[10px] text-slate-500 mt-0.5">NIB / Rede EMIS</span>
+                      </button>
                     </div>
+                  </div>
+
+                  {/* Payment Details Box for Reference */}
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-amber-600 text-[18px]">account_balance_wallet</span>
+                        Coordenadas: {paymentMethod === 'express' ? 'Multicaixa Express' : paymentMethod === 'iban' ? 'IBAN Oficial' : 'KWIK'}
+                      </span>
+                      {copiedCoordinate && (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md animate-fade-in">
+                          {copiedCoordinate} copiado!
+                        </span>
+                      )}
+                    </div>
+
+                    {paymentMethod === 'express' ? (
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white p-3.5 rounded-xl border border-slate-200">
+                        <div>
+                          <span className="text-[10px] text-slate-500 uppercase font-bold block">Telemóvel Multicaixa Express DZMV:</span>
+                          <strong className="font-mono text-sm sm:text-base text-slate-900">{bankingConfig.mcxPhone}</strong>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyCoordinateText(bankingConfig.mcxPhone, 'Número Express')}
+                          className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg font-bold text-xs flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-sm">content_copy</span>
+                          <span>Copiar Número</span>
+                        </button>
+                      </div>
+                    ) : paymentMethod === 'iban' ? (
+                      <div className="space-y-2 bg-white p-3.5 rounded-xl border border-slate-200">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <span className="text-[10px] text-slate-500 uppercase font-bold block">IBAN Oficial DZMV:</span>
+                            <strong className="font-mono text-xs sm:text-sm text-slate-900">{bankingConfig.iban}</strong>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => copyCoordinateText(bankingConfig.iban, 'IBAN')}
+                            className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg font-bold text-xs flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-sm">content_copy</span>
+                            <span>Copiar IBAN</span>
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap justify-between text-[11px] text-slate-600 pt-1.5 border-t border-slate-100">
+                          <span>Instituição Bancária: <strong>{bankingConfig.bank}</strong></span>
+                          <span>Titular / Beneficiário: <strong>{bankingConfig.beneficiary}</strong></span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 bg-white p-3.5 rounded-xl border border-slate-200">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <span className="text-[10px] text-slate-500 uppercase font-bold block">NIB / Telemóvel KWIK:</span>
+                            <strong className="font-mono text-xs sm:text-sm text-slate-900">{bankingConfig.kwikNibOrPhone}</strong>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => copyCoordinateText(bankingConfig.kwikNibOrPhone, 'KWIK')}
+                            className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg font-bold text-xs flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-sm">content_copy</span>
+                            <span>Copiar KWIK</span>
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap justify-between text-[11px] text-slate-600 pt-1.5 border-t border-slate-100">
+                          <span>Nome da Conta: <strong>{bankingConfig.kwikAccountName}</strong></span>
+                          <span>Rede: <strong>{bankingConfig.kwikBank}</strong></span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Prominent Instructions & Observation Box */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-amber-50 border-2 border-amber-300/80 shadow-xs space-y-2">
+                    <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+                      <span className="material-symbols-outlined text-amber-700 text-xl">info</span>
+                      <span>Instruções de Pagamento & Envio do Comprovativo:</span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-amber-950 font-medium leading-relaxed whitespace-pre-line">
+                      {bankingConfig.instructions || 'Efetue o pagamento via Multicaixa Express, Transferência IBAN ou Transferência KWIK e anexe o comprovativo no WhatsApp para validação e liberação do seu pedido.'}
+                    </p>
+                    {bankingConfig.redirectWhatsAppPhone && (
+                      <div className="pt-2 border-t border-amber-200/80 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-950 font-semibold">
+                        <span className="flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[16px] text-emerald-600">chat</span>
+                          Número WhatsApp para Envio do Comprovativo:
+                        </span>
+                        <strong className="font-mono text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded font-bold">
+                          {bankingConfig.redirectWhatsAppPhone}
+                        </strong>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                /* VIEW B: PAGAR DEPOIS (AGENDAR PAGAMENTO) */
+                <div className="space-y-4">
+                  {/* Explanatory banner */}
+                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-950 space-y-1.5">
+                    <div className="flex items-center gap-2 font-bold text-amber-900 text-sm">
+                      <span className="material-symbols-outlined text-amber-700 text-lg">event_available</span>
+                      <span>Reserva Garantida • Defina o Período de Pagamento</span>
+                    </div>
+                    <p className="text-slate-700 leading-relaxed">
+                      Não pode pagar no momento? Fique tranquilo! Selecione em que intervalo de dias ou semana pretende fazer o pagamento para reservarmos o seu exemplar com antecedência.
+                    </p>
+                  </div>
+
+                  {/* Interval Options */}
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase text-slate-600 tracking-wider block">
+                      Defina o intervalo em que fará o pagamento: *
+                    </label>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setScheduleOption('3dias')}
+                        className={`p-2.5 rounded-xl border text-left font-bold transition-all cursor-pointer ${
+                          scheduleOption === '3dias'
+                            ? 'border-amber-600 bg-amber-50 text-amber-950 ring-2 ring-amber-500/30'
+                            : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        <span className="block text-[11px] uppercase font-bold text-amber-800">Opção Rápida</span>
+                        <span className="block font-bold mt-0.5">⚡ Nos próximos 3 dias</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setScheduleOption('esta_semana')}
+                        className={`p-2.5 rounded-xl border text-left font-bold transition-all cursor-pointer ${
+                          scheduleOption === 'esta_semana'
+                            ? 'border-amber-600 bg-amber-50 text-amber-950 ring-2 ring-amber-500/30'
+                            : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        <span className="block text-[11px] uppercase font-bold text-amber-800">Semana Atual</span>
+                        <span className="block font-bold mt-0.5">📅 Esta semana</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setScheduleOption('proxima_semana')}
+                        className={`p-2.5 rounded-xl border text-left font-bold transition-all cursor-pointer ${
+                          scheduleOption === 'proxima_semana'
+                            ? 'border-amber-600 bg-amber-50 text-amber-950 ring-2 ring-amber-500/30'
+                            : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        <span className="block text-[11px] uppercase font-bold text-amber-800">Próximos Dias</span>
+                        <span className="block font-bold mt-0.5">🗓️ Na próxima semana</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setScheduleOption('fim_do_mes')}
+                        className={`p-2.5 rounded-xl border text-left font-bold transition-all cursor-pointer ${
+                          scheduleOption === 'fim_do_mes'
+                            ? 'border-amber-600 bg-amber-50 text-amber-950 ring-2 ring-amber-500/30'
+                            : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        <span className="block text-[11px] uppercase font-bold text-amber-800">Fim de Mês</span>
+                        <span className="block font-bold mt-0.5">💰 Dia de Salário</span>
+                      </button>
+                    </div>
+
+                    {/* Button for custom date range */}
                     <button
                       type="button"
-                      onClick={() => copyCoordinateText(bankingConfig.mcxPhone, 'Número Express')}
-                      className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg font-bold text-xs flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                      onClick={() => setScheduleOption('personalizado')}
+                      className={`w-full py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        scheduleOption === 'personalizado'
+                          ? 'border-amber-600 bg-amber-50 text-amber-950 font-bold ring-2 ring-amber-500/30'
+                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
+                      }`}
                     >
-                      <span className="material-symbols-outlined text-sm">content_copy</span>
-                      <span>Copiar Número</span>
+                      <span className="material-symbols-outlined text-[16px]">date_range</span>
+                      <span>Definir Intervalo de Datas Específico (Entre dia X e dia Y)</span>
                     </button>
-                  </div>
-                ) : paymentMethod === 'iban' ? (
-                  <div className="space-y-2 bg-white p-3.5 rounded-xl border border-slate-200">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div>
-                        <span className="text-[10px] text-slate-500 uppercase font-bold block">IBAN Oficial DZMV:</span>
-                        <strong className="font-mono text-xs sm:text-sm text-slate-900">{bankingConfig.iban}</strong>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => copyCoordinateText(bankingConfig.iban, 'IBAN')}
-                        className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg font-bold text-xs flex items-center justify-center gap-1 cursor-pointer transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-sm">content_copy</span>
-                        <span>Copiar IBAN</span>
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap justify-between text-[11px] text-slate-600 pt-1.5 border-t border-slate-100">
-                      <span>Instituição Bancária: <strong>{bankingConfig.bank}</strong></span>
-                      <span>Titular / Beneficiário: <strong>{bankingConfig.beneficiary}</strong></span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2 bg-white p-3.5 rounded-xl border border-slate-200">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div>
-                        <span className="text-[10px] text-slate-500 uppercase font-bold block">NIB / Telemóvel KWIK:</span>
-                        <strong className="font-mono text-xs sm:text-sm text-slate-900">{bankingConfig.kwikNibOrPhone}</strong>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => copyCoordinateText(bankingConfig.kwikNibOrPhone, 'KWIK')}
-                        className="px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-lg font-bold text-xs flex items-center justify-center gap-1 cursor-pointer transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-sm">content_copy</span>
-                        <span>Copiar KWIK</span>
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap justify-between text-[11px] text-slate-600 pt-1.5 border-t border-slate-100">
-                      <span>Nome da Conta: <strong>{bankingConfig.kwikAccountName}</strong></span>
-                      <span>Rede: <strong>{bankingConfig.kwikBank}</strong></span>
-                    </div>
-                  </div>
-                )}
-              </div>
 
-              {/* Prominent Instructions & Observation Box */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-amber-50 border-2 border-amber-300/80 shadow-xs space-y-2">
-                <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
-                  <span className="material-symbols-outlined text-amber-700 text-xl">info</span>
-                  <span>Instruções de Pagamento & Envio do Comprovativo:</span>
+                    {/* Custom Range Picker */}
+                    {scheduleOption === 'personalizado' && (
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl grid grid-cols-2 gap-2 text-xs animate-fade-in">
+                        <div>
+                          <label className="font-bold text-slate-600 block mb-1">A partir do dia:</label>
+                          <input
+                            type="date"
+                            value={customDateStart}
+                            onChange={(e) => setCustomDateStart(e.target.value)}
+                            className="w-full p-2 rounded-lg border border-slate-300 bg-white font-mono text-slate-800 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="font-bold text-slate-600 block mb-1">Até ao dia:</label>
+                          <input
+                            type="date"
+                            value={customDateEnd}
+                            onChange={(e) => setCustomDateEnd(e.target.value)}
+                            className="w-full p-2 rounded-lg border border-slate-300 bg-white font-mono text-slate-800 text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Scheduled Period Badge */}
+                    <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl text-xs text-purple-950 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-purple-700 text-lg shrink-0">event_upcoming</span>
+                        <span>Previsão de Pagamento: <strong className="text-purple-900">{getSchedulePeriodLabel()}</strong></span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full bg-purple-200 text-purple-900 font-bold text-[10px] shrink-0">
+                        Agendado
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Compact Coordinates to Save */}
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-amber-600 text-base">bookmark</span>
+                        Guarde as Coordenadas para Quando For Pagar:
+                      </span>
+                      {copiedCoordinate && (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md">
+                          {copiedCoordinate} copiado!
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      {/* Express */}
+                      <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <span className="text-[10px] text-slate-500 font-bold block">Multicaixa Express:</span>
+                          <strong className="font-mono text-slate-900 text-xs truncate block">{bankingConfig.mcxPhone}</strong>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyCoordinateText(bankingConfig.mcxPhone, 'Número Express')}
+                          className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-lg text-[11px] font-bold shrink-0 border border-amber-200 cursor-pointer"
+                        >
+                          Copiar
+                        </button>
+                      </div>
+
+                      {/* IBAN */}
+                      <div className="bg-white p-2.5 rounded-xl border border-slate-200 flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <span className="text-[10px] text-slate-500 font-bold block">IBAN ({bankingConfig.bank}):</span>
+                          <strong className="font-mono text-slate-900 text-xs truncate block">{bankingConfig.iban}</strong>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyCoordinateText(bankingConfig.iban, 'IBAN')}
+                          className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-lg text-[11px] font-bold shrink-0 border border-amber-200 cursor-pointer"
+                        >
+                          Copiar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs sm:text-sm text-amber-950 font-medium leading-relaxed whitespace-pre-line">
-                  {bankingConfig.instructions || 'Efetue o pagamento via Multicaixa Express, Transferência IBAN ou Transferência KWIK e anexe o comprovativo no WhatsApp para validação e liberação do seu pedido.'}
-                </p>
-                {bankingConfig.redirectWhatsAppPhone && (
-                  <div className="pt-2 border-t border-amber-200/80 flex flex-wrap items-center justify-between gap-2 text-xs text-amber-950 font-semibold">
-                    <span className="flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[16px] text-emerald-600">chat</span>
-                      Número WhatsApp para Envio do Comprovativo:
-                    </span>
-                    <strong className="font-mono text-emerald-900 bg-emerald-100 px-2 py-0.5 rounded font-bold">
-                      {bankingConfig.redirectWhatsAppPhone}
-                    </strong>
-                  </div>
-                )}
-              </div>
+              )}
 
-              {/* Big Finalize on WhatsApp Button */}
+              {/* Big Finalize on WhatsApp Button (Dynamic for Agora vs Depois) */}
               <a
                 href={buildWhatsAppLink(
                   fullName,
@@ -1306,17 +1613,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     ? 'Transferência IBAN' 
                     : 'Transferência KWIK',
                   bankingConfig.redirectWhatsAppPhone || '+244 943 793 069',
-                  deliveryAddress
+                  deliveryAddress,
+                  paymentTiming,
+                  getSchedulePeriodLabel()
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setShowWhatsAppModal(false)}
-                className="w-full py-4 px-6 rounded-2xl bg-[#25D366] hover:bg-[#1EBE5D] text-slate-950 font-bold text-base transition-all shadow-lg flex items-center justify-center gap-3 text-center cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+                className="w-full py-4 px-6 rounded-2xl bg-[#25D366] hover:bg-[#1EBE5D] text-slate-950 font-bold text-sm sm:text-base transition-all shadow-lg flex items-center justify-center gap-3 text-center cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
               >
                 <svg className="w-6 h-6 fill-current shrink-0" viewBox="0 0 24 24">
                   <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
                 </svg>
-                <span>Já Paguei • Finalizar no WhatsApp</span>
+                <span>
+                  {paymentTiming === 'agora'
+                    ? 'Já Paguei • Finalizar no WhatsApp'
+                    : 'Confirmar Agendamento no WhatsApp'}
+                </span>
                 <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
               </a>
             </div>

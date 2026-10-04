@@ -31,23 +31,9 @@ export default function App() {
       setAdminUser(loadedAdmin);
     }
 
-    // 1. Initial direct load from Cloud Firestore to sync any leads created on other devices
-    loadAllLeadsFromFirestore().then((remoteLeads) => {
-      if (remoteLeads && remoteLeads.length > 0) {
-        setLeads(remoteLeads);
-        saveStoredLeads(remoteLeads);
-      }
-    });
+    let unsubscribeLeads: (() => void) | null = null;
 
-    // 2. Real-time subscription to Cloud Firestore
-    const unsubscribeLeads = subscribeToFirestoreLeads((remoteLeads) => {
-      if (remoteLeads && remoteLeads.length > 0) {
-        setLeads(remoteLeads);
-        saveStoredLeads(remoteLeads);
-      }
-    });
-
-    // 3. Subscribe to Firebase Auth state
+    // Subscribe to Firebase Auth state and only attach Firestore listeners when authenticated
     const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         const initials = firebaseUser.displayName
@@ -64,6 +50,30 @@ export default function App() {
         };
         setAdminUser(userObj);
         setStoredAdmin(userObj);
+
+        // 1. Initial direct load from Cloud Firestore once authenticated
+        loadAllLeadsFromFirestore().then((remoteLeads) => {
+          if (remoteLeads && remoteLeads.length > 0) {
+            setLeads(remoteLeads);
+            saveStoredLeads(remoteLeads);
+          }
+        });
+
+        // 2. Real-time subscription to Cloud Firestore once authenticated
+        if (unsubscribeLeads) {
+          unsubscribeLeads();
+        }
+        unsubscribeLeads = subscribeToFirestoreLeads((remoteLeads) => {
+          if (remoteLeads && remoteLeads.length > 0) {
+            setLeads(remoteLeads);
+            saveStoredLeads(remoteLeads);
+          }
+        });
+      } else {
+        if (unsubscribeLeads) {
+          unsubscribeLeads();
+          unsubscribeLeads = null;
+        }
       }
     });
 

@@ -12,7 +12,8 @@ import {
   User as FirebaseUser
 } from 'firebase/auth';
 import { 
-  initializeFirestore,
+  getFirestore,
+  getDocFromServer,
   doc, 
   collection, 
   setDoc, 
@@ -24,22 +25,26 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
-// Suppress transient connection warnings in restricted browser/preview environments
-setLogLevel('error');
+// Suppress internal connection retry warnings in restricted browser/preview environments
+setLogLevel('silent');
 
 // Initialize Firebase App
 export const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore with specific database ID, forced long polling, and undefined properties safety
-// (CRITICAL: Prevents [code=unavailable] WebChannel disconnects and unsupported undefined field value errors)
-export const db = initializeFirestore(
-  app,
-  {
-    experimentalForceLongPolling: true,
-    ignoreUndefinedProperties: true,
-  },
-  firebaseConfig.firestoreDatabaseId
-);
+// Initialize Firestore with specific database ID (conforming to Firebase Integration Skill)
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+// Test Firestore connection on boot (conforming to Firebase Integration Skill)
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.warn('Firebase client operating in offline mode.');
+    }
+  }
+}
+testConnection();
 
 // Initialize Authentication
 export const auth = getAuth(app);
@@ -145,20 +150,10 @@ export async function changeFirebasePassword(newPass: string) {
 }
 
 /**
- * Ensures there is an active Firebase Auth session with admin privileges.
- * If user is not signed in via Google, uses the provisioned admin account.
+ * Returns the active Firebase Auth user if present.
  */
 export async function ensureAdminFirebaseAuth() {
-  if (auth.currentUser) {
-    return auth.currentUser;
-  }
-  try {
-    const cred = await signInWithEmailAndPassword(auth, 'admin@sabhia.ao', 'admin123');
-    return cred.user;
-  } catch (err) {
-    console.warn('Could not authenticate system admin in Firebase:', err);
-    return null;
-  }
+  return auth.currentUser;
 }
 
 export { onAuthStateChanged };

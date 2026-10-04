@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { BOOK_METADATA, BankingConfig, getStoredBankingConfig, saveStoredBankingConfig, GalleryImage, getStoredGallery, resetDefaultGallery } from '../data/bookData';
 import { saveGalleryToFirestore, loadGalleryFromFirestore, subscribeToGallery } from '../services/firebaseGallery';
 import { saveBankingToFirestore, loadBankingFromFirestore, subscribeToBanking } from '../services/firebaseBanking';
-import { Lead, AdminUser, buildAdminToLeadWhatsAppLink, getRegisteredAdmins, registerNewAdmin, deleteRegisteredAdmin, updateAdminPassword, updateAdminNameAndRole } from '../data/leadsData';
+import { Lead, AdminUser, buildAdminToLeadWhatsAppLink, getRegisteredAdmins, registerNewAdmin, deleteRegisteredAdmin, updateAdminPassword, updateAdminNameAndRole, formatLeadRegistrationDate } from '../data/leadsData';
 import { changeFirebasePassword } from '../firebase';
 import { BroadcastModal } from './BroadcastModal';
 import { LeadsEvolutionChart } from './LeadsEvolutionChart';
@@ -34,7 +34,7 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'leads' | 'geral' | 'pagamentos' | 'usuarios' | 'galeria' | 'whatsapp' | 'metadados'>('leads');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'novo' | 'contactado' | 'pago' | 'concluido' | 'alerta-fisico'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'novo' | 'contactado' | 'pago' | 'concluido' | 'alerta-fisico' | 'agendado'>('all');
   const [selectedProductFilter, setSelectedProductFilter] = useState<'all' | 'ebook-amizade'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -262,6 +262,7 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
   const [selectedLeadForDossier, setSelectedLeadForDossier] = useState<Lead | null>(null);
   const [selectedLeadForDispatch, setSelectedLeadForDispatch] = useState<Lead | null>(null);
   const [isBroadcastOpen, setIsBroadcastOpen] = useState(false);
+  const [openLeadActionMenuId, setOpenLeadActionMenuId] = useState<string | null>(null);
 
   // WhatsApp Sandbox
   const [testPhone, setTestPhone] = useState('923 884 120');
@@ -284,12 +285,15 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
   const newLeadsCount = leads.filter(l => l.status === 'novo').length;
   const paidLeadsCount = leads.filter(l => l.status === 'pago' || l.status === 'concluido').length;
   const physicalAlertCount = leads.filter(l => l.wantsPhysicalAlert).length;
+  const scheduledCount = leads.filter(l => l.paymentTiming === 'depois').length;
   const totalRevenueKz = leads.reduce((acc, l) => (l.status === 'pago' || l.status === 'concluido' ? acc + l.amountKz : acc), 0);
 
   // Filtered leads
   const filteredLeads = leads.filter((l) => {
     if (statusFilter === 'alerta-fisico') {
       if (!l.wantsPhysicalAlert) return false;
+    } else if (statusFilter === 'agendado') {
+      if (l.paymentTiming !== 'depois') return false;
     } else if (statusFilter !== 'all' && l.status !== statusFilter) {
       return false;
     }
@@ -319,7 +323,7 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
     const rows = leads
       .map(
         (l) =>
-          `"${l.id}","${l.fullName}","${l.phone}","${l.email}","${l.province}","${l.formatLabel}","${l.paymentMethod}","${l.wantsPhysicalAlert ? 'SIM' : 'NAO'}","${l.amountKz}","${l.statusLabel}","${l.createdAt}"`
+          `"${l.id}","${l.fullName}","${l.phone}","${l.email}","${l.province}","${l.formatLabel}","${l.paymentMethod}","${l.wantsPhysicalAlert ? 'SIM' : 'NAO'}","${l.amountKz}","${l.statusLabel}","${formatLeadRegistrationDate(l)}"`
       )
       .join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
@@ -1144,6 +1148,17 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                         <span className="material-symbols-outlined text-[15px]">notifications_active</span>
                         <span>Avisar Livro Físico ({physicalAlertCount})</span>
                       </button>
+                      <button
+                        onClick={() => setStatusFilter('agendado')}
+                        className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                          statusFilter === 'agendado'
+                            ? 'bg-purple-600 text-white shadow-xs font-bold'
+                            : 'text-purple-900 bg-purple-50 hover:bg-purple-100 font-semibold'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[15px]">event_upcoming</span>
+                        <span>Agendados ({scheduledCount})</span>
+                      </button>
                     </div>
 
                     {/* Search */}
@@ -1162,7 +1177,7 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                   </div>
 
                   {/* Table with Generous Widths */}
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto min-h-[300px]">
                     <table className="w-full text-left border-collapse text-xs min-w-[1050px]">
                       <thead>
                         <tr className="bg-slate-50 text-slate-600 font-bold uppercase tracking-wider text-[11px] border-b border-slate-200">
@@ -1172,11 +1187,11 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                           <th className="py-3.5 px-5 min-w-[180px]">Formato & Pagamento</th>
                           <th className="py-3.5 px-4 min-w-[110px]">Valor em Kz</th>
                           <th className="py-3.5 px-4 min-w-[140px]">Status</th>
-                          <th className="py-3.5 px-5 min-w-[160px] text-right">Ação WhatsApp</th>
+                          <th className="py-3.5 px-5 min-w-[90px] text-right">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {filteredLeads.map((lead) => (
+                        {filteredLeads.map((lead, index) => (
                           <tr key={lead.id} className="hover:bg-slate-50/80 transition-colors">
                             {/* Nome com destaque, espaço amplo e data */}
                             <td className="py-4 px-5">
@@ -1186,7 +1201,7 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                                 </span>
                                 <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-slate-500">
                                   <span className="material-symbols-outlined text-[13px] text-slate-400">schedule</span>
-                                  <span>{lead.createdAt}</span>
+                                  <span>{formatLeadRegistrationDate(lead)}</span>
                                 </div>
                               </div>
                             </td>
@@ -1231,6 +1246,12 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                                     Avisar Livro Físico
                                   </span>
                                 )}
+                                {lead.paymentTiming === 'depois' && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-900 border border-purple-300" title="Pagamento Agendado">
+                                    <span className="material-symbols-outlined text-[12px] text-purple-700">event_upcoming</span>
+                                    {lead.scheduledPeriod ? `Agendado: ${lead.scheduledPeriod}` : 'Pagamento Agendado'}
+                                  </span>
+                                )}
                               </div>
                             </td>
 
@@ -1264,36 +1285,100 @@ export const EditorialDashboard: React.FC<EditorialDashboardProps> = ({
                               </select>
                             </td>
 
-                            {/* Ações */}
+                            {/* Ações agrupadas nos três pontinhos */}
                             <td className="py-4 px-5 text-right">
-                              <div className="inline-flex items-center gap-2 justify-end">
+                              <div className="relative inline-block text-left">
                                 <button
-                                  onClick={() => setSelectedLeadForDispatch(lead)}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition-colors shadow-xs cursor-pointer"
-                                  title="Enviar e-book / notificação via E-mail ou WhatsApp com mensagem pronta"
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenLeadActionMenuId(openLeadActionMenuId === lead.id ? null : lead.id);
+                                  }}
+                                  className={`p-1.5 rounded-lg border transition-all cursor-pointer inline-flex items-center justify-center focus:outline-none ${
+                                    openLeadActionMenuId === lead.id
+                                      ? 'bg-amber-100 border-amber-300 text-amber-900 shadow-xs'
+                                      : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-600 hover:text-slate-900 shadow-2xs'
+                                  }`}
+                                  title="Opções do Lead"
+                                  aria-label="Mais opções"
                                 >
-                                  <span className="material-symbols-outlined text-[16px]">send</span>
-                                  <span>Enviar E-book</span>
+                                  <span className="material-symbols-outlined text-[20px]">more_vert</span>
                                 </button>
 
-                                <button
-                                  onClick={() => openWhatsAppChat(lead)}
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#25D366] hover:bg-[#1EBE5D] text-slate-950 font-bold text-xs transition-colors shadow-xs cursor-pointer"
-                                  title="Iniciar atendimento WhatsApp direto"
-                                >
-                                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
-                                  </svg>
-                                  <span>WhatsApp</span>
-                                </button>
+                                {openLeadActionMenuId === lead.id && (
+                                  <>
+                                    {/* Backdrop invisível para fechar ao clicar fora */}
+                                    <div
+                                      className="fixed inset-0 z-30"
+                                      onClick={() => setOpenLeadActionMenuId(null)}
+                                    />
 
-                                <button
-                                  onClick={() => onDeleteLead(lead.id)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 transition-colors cursor-pointer"
-                                  title="Remover Lead"
-                                >
-                                  <span className="material-symbols-outlined text-[18px]">delete</span>
-                                </button>
+                                    {/* Menu Dropdown com os 3 botões */}
+                                    <div
+                                      className={`absolute right-0 w-52 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 text-left animate-in fade-in zoom-in-95 duration-100 ${
+                                        index >= filteredLeads.length - 2 && filteredLeads.length >= 3
+                                          ? 'bottom-full mb-1.5'
+                                          : 'top-full mt-1.5'
+                                      }`}
+                                    >
+                                      <div className="px-3 py-1.5 text-[10px] uppercase font-bold tracking-wider text-slate-400 border-b border-slate-100">
+                                        Ações do Lead
+                                      </div>
+
+                                      <div className="py-1">
+                                        {/* Botão 1: Enviar E-book */}
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setOpenLeadActionMenuId(null);
+                                            setSelectedLeadForDispatch(lead);
+                                          }}
+                                          className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-amber-50 hover:text-amber-900 flex items-center gap-2.5 transition-colors cursor-pointer group"
+                                          title="Enviar e-book / notificação via E-mail ou WhatsApp"
+                                        >
+                                          <span className="material-symbols-outlined text-[17px] text-amber-600 group-hover:scale-110 transition-transform">
+                                            send
+                                          </span>
+                                          <span>Enviar E-book</span>
+                                        </button>
+
+                                        {/* Botão 2: WhatsApp */}
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setOpenLeadActionMenuId(null);
+                                            openWhatsAppChat(lead);
+                                          }}
+                                          className="w-full text-left px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 flex items-center gap-2.5 transition-colors cursor-pointer group"
+                                          title="Iniciar atendimento WhatsApp direto"
+                                        >
+                                          <svg className="w-3.5 h-3.5 fill-[#25D366] group-hover:scale-110 transition-transform shrink-0" viewBox="0 0 24 24">
+                                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                                          </svg>
+                                          <span>Conversar no WhatsApp</span>
+                                        </button>
+                                      </div>
+
+                                      <div className="pt-1 border-t border-slate-100">
+                                        {/* Botão 3: Remover Lead */}
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setOpenLeadActionMenuId(null);
+                                            onDeleteLead(lead.id);
+                                          }}
+                                          className="w-full text-left px-3.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center gap-2.5 transition-colors cursor-pointer group"
+                                          title="Remover Lead"
+                                        >
+                                          <span className="material-symbols-outlined text-[17px] text-red-500 group-hover:scale-110 transition-transform">
+                                            delete
+                                          </span>
+                                          <span>Remover Lead</span>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
                               </div>
                             </td>
                           </tr>

@@ -8,7 +8,7 @@ import {
   deleteDoc 
 } from 'firebase/firestore';
 import { db, auth, ensureAdminFirebaseAuth } from '../firebase';
-import { Lead } from '../data/leadsData';
+import { Lead, formatLeadRegistrationDate } from '../data/leadsData';
 
 const LEADS_COLLECTION = 'leads';
 
@@ -17,6 +17,8 @@ const LEADS_COLLECTION = 'leads';
  * strictly matching the Firestore Lead entity schema.
  */
 export function sanitizeLeadData(lead: Lead): Record<string, any> {
+  const resolvedDate = formatLeadRegistrationDate(lead);
+
   return {
     id: String(lead.id || `lead-${Date.now()}`),
     fullName: String(lead.fullName || '').trim(),
@@ -31,7 +33,7 @@ export function sanitizeLeadData(lead: Lead): Record<string, any> {
     paymentMethod: String(lead.paymentMethod || 'Multicaixa Express'),
     status: (['novo', 'contactado', 'pago', 'concluido', 'cancelado'].includes(lead.status) ? lead.status : 'novo'),
     statusLabel: String(lead.statusLabel || 'Novo Lead'),
-    createdAt: String(lead.createdAt || 'Agora mesmo'),
+    createdAt: resolvedDate,
     timestamp: Number(lead.timestamp) || Date.now(),
     notes: String(lead.notes || '').trim(),
     whatsappMessageSent: Boolean(lead.whatsappMessageSent),
@@ -62,7 +64,9 @@ export async function saveLeadToFirestore(lead: Lead): Promise<boolean> {
  */
 export async function loadAllLeadsFromFirestore(): Promise<Lead[]> {
   try {
-    await ensureAdminFirebaseAuth();
+    if (!auth.currentUser) {
+      return [];
+    }
     const leadsRef = collection(db, LEADS_COLLECTION);
     const snapshot = await getDocs(leadsRef);
     const firestoreLeads: Lead[] = [];
@@ -82,7 +86,7 @@ export async function loadAllLeadsFromFirestore(): Promise<Lead[]> {
 
 /**
  * Real-time subscription to leads in Cloud Firestore.
- * Automatically ensures an active admin session is present to satisfy security rules.
+ * Conforms to Firebase Skill: Only attach onSnapshot listeners if auth is ready and user is authenticated.
  */
 export function subscribeToFirestoreLeads(
   onData: (leads: Lead[]) => void,
@@ -92,7 +96,7 @@ export function subscribeToFirestoreLeads(
   let unsubscribeSnapshot: (() => void) | null = null;
 
   const startSubscription = () => {
-    if (isUnsubscribed) return;
+    if (isUnsubscribed || !auth.currentUser) return;
 
     try {
       const leadsRef = collection(db, LEADS_COLLECTION);
@@ -121,12 +125,7 @@ export function subscribeToFirestoreLeads(
     }
   };
 
-  // Ensure admin auth, then listen
-  if (!auth.currentUser) {
-    ensureAdminFirebaseAuth().then(() => {
-      startSubscription();
-    });
-  } else {
+  if (auth.currentUser) {
     startSubscription();
   }
 
